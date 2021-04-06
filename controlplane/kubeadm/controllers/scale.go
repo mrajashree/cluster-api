@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"sigs.k8s.io/cluster-api/util/collections"
 	"strings"
 
@@ -35,6 +36,7 @@ import (
 
 func (r *KubeadmControlPlaneReconciler) initializeControlPlane(ctx context.Context, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, controlPlane *internal.ControlPlane) (ctrl.Result, error) {
 	logger := controlPlane.Logger()
+	logger.Info(fmt.Sprintf("[RAJ] Called initializeControlPlane for kcp %v cluster %v", kcp.Name, cluster.Name))
 
 	// Perform an uncached read of all the owned machines. This check is in place to make sure
 	// that the controller cache is not misbehaving and we end up initializing the cluster more than once.

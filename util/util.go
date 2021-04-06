@@ -193,6 +193,12 @@ func IsControlPlaneMachine(machine *clusterv1.Machine) bool {
 	return ok
 }
 
+// IsEtcdPlaneMachine checks machine is a etcd plane node.
+func IsEtcdPlaneMachine(machine *clusterv1.Machine) bool {
+	_, ok := machine.ObjectMeta.Labels[clusterv1.MachineEtcdPlaneLabelName]
+	return ok
+}
+
 // IsNodeReady returns true if a node is ready.
 func IsNodeReady(node *v1.Node) bool {
 	for _, condition := range node.Status.Conditions {

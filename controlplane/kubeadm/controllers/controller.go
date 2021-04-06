@@ -107,7 +107,7 @@ func (r *KubeadmControlPlaneReconciler) SetupWithManager(ctx context.Context, mg
 
 func (r *KubeadmControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
-
+log.Info(fmt.Sprintf("[RAJ] KubeadmControlPlaneReconciler.Reconcile for %v", req.NamespacedName))
 	// Fetch the KubeadmControlPlane instance.
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	if err := r.Client.Get(ctx, req.NamespacedName, kcp); err != nil {
@@ -138,7 +138,7 @@ func (r *KubeadmControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.
 	if !cluster.Status.InfrastructureReady {
 		return ctrl.Result{}, nil
 	}
-
+	log.Info(fmt.Sprintf("[RAJ] KubeadmControlPlaneReconciler.Reconcile Infra ready for %v", req.NamespacedName))
 	// Initialize the patch helper.
 	patchHelper, err := patch.NewHelper(kcp, r.Client)
 	if err != nil {
@@ -235,6 +235,7 @@ func patchKubeadmControlPlane(ctx context.Context, patchHelper *patch.Helper, kc
 func (r *KubeadmControlPlaneReconciler) reconcile(ctx context.Context, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (res ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx, "cluster", cluster.Name)
 	log.Info("Reconcile KubeadmControlPlane")
+	log.Info(fmt.Sprintf("[RAJ] KubeadmControlPlaneReconciler.reconcile for %v", kcp.Name))
 
 	// Make sure to reconcile the external infrastructure reference.
 	if err := r.reconcileExternalReference(ctx, cluster, kcp.Spec.InfrastructureTemplate); err != nil {
@@ -261,7 +262,7 @@ func (r *KubeadmControlPlaneReconciler) reconcile(ctx context.Context, cluster *
 		log.Info("Cluster does not yet have a ControlPlaneEndpoint defined")
 		return ctrl.Result{}, nil
 	}
-
+	log.Info(fmt.Sprintf("[RAJ] KubeadmControlPlaneReconciler.reconcile cluster has controlplaneendpoint %v", cluster.Spec.ControlPlaneEndpoint))
 	// Generate Cluster Kubeconfig if needed
 	if result, err := r.reconcileKubeconfig(ctx, cluster, kcp); !result.IsZero() || err != nil {
 		if err != nil {
@@ -472,6 +473,8 @@ func (r *KubeadmControlPlaneReconciler) reconcileControlPlaneConditions(ctx cont
 	if !controlPlane.KCP.Status.Initialized {
 		return ctrl.Result{}, nil
 	}
+	log := ctrl.LoggerFrom(ctx)
+	log.Info(fmt.Sprintf("[RAJ] KubeadmControlPlaneReconciler.reconcileControlPlaneConditions kcp is initialized %v", controlPlane.KCP.Name))
 
 	workloadCluster, err := r.managementCluster.GetWorkloadCluster(ctx, util.ObjectKey(controlPlane.Cluster))
 	if err != nil {

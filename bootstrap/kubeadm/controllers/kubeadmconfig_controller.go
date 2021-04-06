@@ -140,6 +140,8 @@ func (r *KubeadmConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	log.Info(fmt.Sprintf("[RAJ] Reconcile kubeadmconfig called for %v", config.Name))
+
 	// Look up the owner of this kubeadm config if there is one
 	configOwner, err := bsutil.GetConfigOwner(ctx, r.Client, config)
 	if apierrors.IsNotFound(err) {
@@ -527,6 +529,7 @@ func (r *KubeadmConfigReconciler) joinControlplane(ctx context.Context, scope *S
 	if !scope.ConfigOwner.IsControlPlaneMachine() {
 		return ctrl.Result{}, fmt.Errorf("%s is not a valid control plane kind, only Machine is supported", scope.ConfigOwner.GetKind())
 	}
+	scope.Info(fmt.Sprintf("[RAJ] join controlplane started for %v", scope.Config.Name))
 
 	if scope.Config.Spec.JoinConfiguration.ControlPlane == nil {
 		scope.Config.Spec.JoinConfiguration.ControlPlane = &kubeadmv1beta1.JoinControlPlane{}

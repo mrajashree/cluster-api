@@ -243,6 +243,9 @@ func (r *ClusterReconciler) reconcileControlPlane(ctx context.Context, cluster *
 			return ctrl.Result{}, err
 		}
 		if initialized {
+			log := ctrl.LoggerFrom(ctx)
+			log.Info(fmt.Sprintf("[RAJ] Setting ControlPlaneInitializedCondition true controlPlaneConfig is initialized on cluster"))
+
 			conditions.MarkTrue(cluster, clusterv1.ControlPlaneInitializedCondition)
 		} else {
 			conditions.MarkFalse(cluster, clusterv1.ControlPlaneInitializedCondition, clusterv1.WaitingForControlPlaneProviderInitializedReason, clusterv1.ConditionSeverityInfo, "Waiting for control plane provider to indicate the control plane has been initialized")
@@ -263,6 +266,10 @@ func (r *ClusterReconciler) reconcileKubeconfig(ctx context.Context, cluster *cl
 	// responsible for the management of the Kubeconfig. We continue to manage it here only for backward
 	// compatibility when a Control Plane provider is not in use.
 	if cluster.Spec.ControlPlaneRef != nil {
+		return ctrl.Result{}, nil
+	}
+
+	if cluster.Spec.EtcdRef != nil {
 		return ctrl.Result{}, nil
 	}
 

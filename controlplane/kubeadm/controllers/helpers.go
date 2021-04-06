@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -149,7 +150,8 @@ func (r *KubeadmControlPlaneReconciler) reconcileExternalReference(ctx context.C
 
 func (r *KubeadmControlPlaneReconciler) cloneConfigsAndGenerateMachine(ctx context.Context, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, bootstrapSpec *bootstrapv1.KubeadmConfigSpec, failureDomain *string) error {
 	var errs []error
-
+	log := ctrl.LoggerFrom(ctx)
+	log.Info(fmt.Sprintf("[RAJ] Called cloneConfigsAndGenerateMachine for kcp %v cluster %v", kcp.Name, cluster.Name))
 	// Since the cloned resource should eventually have a controller ref for the Machine, we create an
 	// OwnerReference here without the Controller field set
 	infraCloneOwner := &metav1.OwnerReference{
@@ -232,7 +234,8 @@ func (r *KubeadmControlPlaneReconciler) generateKubeadmConfig(ctx context.Contex
 		Name:       kcp.Name,
 		UID:        kcp.UID,
 	}
-
+log := ctrl.LoggerFrom(ctx)
+log.Info(fmt.Sprintf("[RAJ] Generating KubeadmConfig for %v", kcp.Name))
 	bootstrapConfig := &bootstrapv1.KubeadmConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            names.SimpleNameGenerator.GenerateName(kcp.Name + "-"),

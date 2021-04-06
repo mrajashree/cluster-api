@@ -61,6 +61,8 @@ const (
 	// the current readiness of the cluster's control plane.
 	ControlPlaneInitializedCondition ConditionType = "ControlPlaneInitialized"
 
+	EtcdInitializedCondition ConditionType = "EtcdInitialized"
+
 	// MissingNodeRefReason (Severity=Info) documents a cluster waiting for at least one control plane Machine to have
 	// its node reference populated.
 	MissingNodeRefReason = "MissingNodeRef"

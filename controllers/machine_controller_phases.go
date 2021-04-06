@@ -37,6 +37,7 @@ import (
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
@@ -128,9 +129,12 @@ func (r *MachineReconciler) reconcileExternal(ctx context.Context, cluster *clus
 	}
 
 	// Set external object ControllerReference to the Machine.
+	log.Info(fmt.Sprintf("[RAJ] Setting Machine ControllerRef on %v", obj.GetKind()))
 	if err := controllerutil.SetControllerReference(m, obj, r.Client.Scheme()); err != nil {
+		log.Info(fmt.Sprintf("[RAJ] Error setting Machine ControllerRef on %v: %v", obj.GetKind(), err))
 		return external.ReconcileOutput{}, err
 	}
+	log.Info(fmt.Sprintf("[RAJ] Done setting Machine ControllerRef on %v", obj.GetKind()))
 
 	// Set the Cluster label.
 	labels := obj.GetLabels()
@@ -184,7 +188,7 @@ func (r *MachineReconciler) reconcileBootstrap(ctx context.Context, cluster *clu
 	if m.Spec.Bootstrap.ConfigRef == nil {
 		return ctrl.Result{}, nil
 	}
-
+	log.Info(fmt.Sprintf("[RAJ]: reconcileExternal: bootstrap config ref: %v", m.Spec.Bootstrap.ConfigRef))
 	// Call generic external reconciler if we have an external reference.
 	externalResult, err := r.reconcileExternal(ctx, cluster, m, m.Spec.Bootstrap.ConfigRef)
 	if err != nil {
@@ -295,6 +299,48 @@ func (r *MachineReconciler) reconcileInfrastructure(ctx context.Context, cluster
 	err = util.UnstructuredUnmarshalField(infraConfig, &m.Status.Addresses, "status", "addresses")
 	if err != nil && err != util.ErrUnstructuredFieldNotFound {
 		return ctrl.Result{}, errors.Wrapf(err, "failed to retrieve addresses from infrastructure provider for Machine %q in namespace %q", m.Name, m.Namespace)
+	}
+	log.Info(fmt.Sprintf("[RAJ] address set for machine %v", m.Name))
+	etcdSecretName := fmt.Sprintf("%v-%v", cluster.Name, "etcd-init")
+	existingSecret := &corev1.Secret{}
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: cluster.Namespace, Name: etcdSecretName}, existingSecret); err != nil {
+		if apierrors.IsNotFound(err) {
+			// secret doesn't exist, so create it for the init machine
+			var machineInternalIP string
+			for _, address := range m.Status.Addresses {
+				if address.Type == clusterv1.MachineInternalIP {
+					machineInternalIP = address.Address
+					break
+				}
+			}
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      etcdSecretName,
+					Namespace: cluster.Namespace,
+					Labels: map[string]string{
+						clusterv1.ClusterLabelName: cluster.Name,
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: clusterv1.GroupVersion.String(),
+							Kind:       cluster.Kind,
+							Name:       cluster.Name,
+							UID:        cluster.UID,
+						},
+					},
+				},
+				Data: map[string][]byte{
+					"address": []byte(machineInternalIP),
+				},
+				Type: clusterv1.ClusterSecretType,
+			}
+			if err := r.Client.Create(ctx, secret); err != nil {
+				log.Error(err, fmt.Sprintf("Failed to create etcd init secret contianing address with err: %v", err))
+				return ctrl.Result{}, err
+			}
+		}
+		log.Error(err, "tcd init secret contianing address with ")
+		return ctrl.Result{}, err
 	}
 
 	// Get and set the failure domain from the infrastructure provider.

@@ -19,7 +19,7 @@ require (
 	github.com/google/gofuzz v1.2.0
 	github.com/gosuri/uitable v0.0.4
 	github.com/onsi/ginkgo v1.15.0
-	github.com/onsi/gomega v1.10.5
+	github.com/onsi/gomega v1.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
@@ -34,10 +34,11 @@ require (
 	k8s.io/client-go v0.21.0-beta.1
 	k8s.io/cluster-bootstrap v0.21.0-beta.1
 	k8s.io/component-base v0.21.0-beta.1
-	k8s.io/klog/v2 v2.5.0
+	k8s.io/klog/v2 v2.8.0
 	k8s.io/kubectl v0.21.0-beta.1
-	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
-	sigs.k8s.io/controller-runtime v0.8.2-0.20210314174504-df2c43d8896d
-	sigs.k8s.io/kind v0.9.0
+	k8s.io/utils v0.0.0-20210305010621-2afb4311ab10
+	sigs.k8s.io/cluster-api/test/infrastructure/docker v0.0.0-20210402170612-77093e2350cd // indirect
+	sigs.k8s.io/controller-runtime v0.9.0-alpha.1
+	sigs.k8s.io/kind v0.10.0
 	sigs.k8s.io/yaml v1.2.0
 )

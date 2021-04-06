@@ -29,6 +29,8 @@ const (
 	// MachineControlPlaneLabelName is the label set on machines or related objects that are part of a control plane.
 	MachineControlPlaneLabelName = "cluster.x-k8s.io/control-plane"
 
+	MachineEtcdPlaneLabelName = "cluster.x-k8s.io/etcd-plane"
+
 	// ExcludeNodeDrainingAnnotation annotation explicitly skips node draining if set
 	ExcludeNodeDrainingAnnotation = "machine.cluster.x-k8s.io/exclude-node-draining"
 

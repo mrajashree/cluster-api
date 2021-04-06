@@ -488,6 +488,7 @@ func (r *ClusterReconciler) reconcileControlPlaneInitialized(ctx context.Context
 
 	for _, m := range machines {
 		if util.IsControlPlaneMachine(m) && m.Status.NodeRef != nil {
+			log.Info(fmt.Sprintf("[RAJ] Setting ControlPlaneInitializedCondition true because machine %v is active with nodeRef %v", m.Name, m.Status.NodeRef))
 			conditions.MarkTrue(cluster, clusterv1.ControlPlaneInitializedCondition)
 			return ctrl.Result{}, nil
 		}

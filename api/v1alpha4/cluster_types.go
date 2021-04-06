@@ -53,6 +53,9 @@ type ClusterSpec struct {
 	// +optional
 	ControlPlaneRef *corev1.ObjectReference `json:"controlPlaneRef,omitempty"`
 
+	// +optional
+	EtcdRef *corev1.ObjectReference `json:"etcdRef,omitempty"`
+
 	// InfrastructureRef is a reference to a provider-specific resource that holds the details
 	// for provisioning infrastructure for a cluster in said provider.
 	// +optional

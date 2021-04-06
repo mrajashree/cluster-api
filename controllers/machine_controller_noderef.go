@@ -59,6 +59,9 @@ func (r *MachineReconciler) reconcileNode(ctx context.Context, cluster *clusterv
 	}
 
 	// Even if Status.NodeRef exists, continue to do the following checks to make sure Node is healthy
+	if machine.Spec.Bootstrap.ConfigRef.Kind == "EtcdadmConfig" {
+
+	}
 	node, err := r.getNode(ctx, remoteClient, providerID)
 	if err != nil {
 		if err == ErrNodeNotFound {

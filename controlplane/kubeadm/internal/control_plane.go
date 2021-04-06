@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/failuredomains"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"fmt"
 )
 
 // Log is the global logger for the internal package.
@@ -193,6 +194,7 @@ func (c *ControlPlane) JoinControlPlaneConfig() *bootstrapv1.KubeadmConfigSpec {
 // GenerateKubeadmConfig generates a new kubeadm config for creating new control plane nodes.
 func (c *ControlPlane) GenerateKubeadmConfig(spec *bootstrapv1.KubeadmConfigSpec) *bootstrapv1.KubeadmConfig {
 	// Create an owner reference without a controller reference because the owning controller is the machine controller
+	fmt.Printf("\n[RAJ] In internal/control_plane.go GenerateKubeadmConfig from spec\n")
 	owner := metav1.OwnerReference{
 		APIVersion: controlplanev1.GroupVersion.String(),
 		Kind:       "KubeadmControlPlane",

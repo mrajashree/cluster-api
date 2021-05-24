@@ -47,3 +47,5 @@ require (
 	sigs.k8s.io/kind v0.7.1-0.20200303021537-981bd80d3802
 	sigs.k8s.io/yaml v1.2.0
 )
+
+replace github.com/coredns/corefile-migration => github.com/coredns/corefile-migration v1.0.12-0.20210304171735-2bcdecd9196e

@@ -1305,6 +1305,7 @@ spec:
                 description: Format specifies the output format of the bootstrap data
                 enum:
                 - cloud-config
+                - bottlerocket
                 type: string
               initConfiguration:
                 description: InitConfiguration along with ClusterConfiguration are

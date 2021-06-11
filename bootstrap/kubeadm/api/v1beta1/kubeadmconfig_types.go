@@ -32,6 +32,9 @@ const (
 
 	// Ignition make the bootstrap data to be of Ignition format.
 	Ignition Format = "ignition"
+
+	// Bottlerocket make the bootstrap data to be of bottlerocket format.
+	Bottlerocket Format = "bottlerocket"
 )
 
 // KubeadmConfigSpec defines the desired state of KubeadmConfig.

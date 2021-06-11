@@ -1501,6 +1501,7 @@ spec:
                           data
                         enum:
                         - cloud-config
+                        - bottlerocket
                         type: string
                       initConfiguration:
                         description: InitConfiguration along with ClusterConfiguration

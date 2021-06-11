@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"time"
@@ -40,6 +41,7 @@ import (
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
+	"sigs.k8s.io/cluster-api/bootstrap/kubeadm/internal/bottlerocket"
 	"sigs.k8s.io/cluster-api/bootstrap/kubeadm/internal/cloudinit"
 	"sigs.k8s.io/cluster-api/bootstrap/kubeadm/internal/ignition"
 	"sigs.k8s.io/cluster-api/bootstrap/kubeadm/internal/locking"
@@ -470,6 +472,16 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 			ControlPlaneInput: controlPlaneInput,
 			Ignition:          scope.Config.Spec.Ignition,
 		})
+	case bootstrapv1.Bottlerocket:
+		bootstrapInitData, err = cloudinit.NewInitControlPlane(controlPlaneInput)
+		// Convert the cloudinit to base64 encoding before using it
+		b64BootStrapCloudInit := base64.StdEncoding.EncodeToString(bootstrapInitData)
+
+		bootstrapInitData, err = bottlerocket.NewInitControlPlane(b64BootStrapCloudInit, scope.Config.Spec.Users)
+		if err != nil {
+			scope.Error(err, "Failed to generate cloud init for bottlerocket bootstrap control plane")
+			return ctrl.Result{}, err
+		}
 	default:
 		bootstrapInitData, err = cloudinit.NewInitControlPlane(controlPlaneInput)
 	}
@@ -562,6 +574,15 @@ func (r *KubeadmConfigReconciler) joinWorker(ctx context.Context, scope *Scope) 
 			NodeInput: nodeInput,
 			Ignition:  scope.Config.Spec.Ignition,
 		})
+	case bootstrapv1.Bottlerocket:
+		bootstrapJoinData, err = cloudinit.NewNode(nodeInput)
+		// Convert the cloudinit to base64 encoding before using it
+		b64BootStrapCloudInit := base64.StdEncoding.EncodeToString(bootstrapJoinData)
+		bootstrapJoinData, err = bottlerocket.NewNode(b64BootStrapCloudInit, scope.Config.Spec.Users)
+		if err != nil {
+			scope.Error(err, "Failed to create a worker bottlerocket join configuration")
+			return ctrl.Result{}, err
+		}
 	default:
 		bootstrapJoinData, err = cloudinit.NewNode(nodeInput)
 	}
@@ -658,6 +679,15 @@ func (r *KubeadmConfigReconciler) joinControlplane(ctx context.Context, scope *S
 			ControlPlaneJoinInput: controlPlaneJoinInput,
 			Ignition:              scope.Config.Spec.Ignition,
 		})
+	case bootstrapv1.Bottlerocket:
+		bootstrapJoinData, err = cloudinit.NewJoinControlPlane(controlPlaneJoinInput)
+		// Convert the cloudinit to base64 encoding before using it
+		b64BootStrapCloudInit := base64.StdEncoding.EncodeToString(bootstrapJoinData)
+		bootstrapJoinData, err = bottlerocket.NewInitControlPlane(b64BootStrapCloudInit, scope.Config.Spec.Users)
+		if err != nil {
+			scope.Error(err, "Failed to generate cloud init for bottlerocket bootstrap control plane")
+			return ctrl.Result{}, err
+		}
 	default:
 		bootstrapJoinData, err = cloudinit.NewJoinControlPlane(controlPlaneJoinInput)
 	}

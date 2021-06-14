@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/cluster-api/controllers/noderefutil"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	addonsv1old "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
+	kubeadmv1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1alpha4"
 	addonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha4"
 	addonscontrollers "sigs.k8s.io/cluster-api/exp/addons/controllers"
 	expv1old "sigs.k8s.io/cluster-api/exp/api/v1alpha3"
@@ -90,6 +91,7 @@ func init() {
 	_ = addonsv1old.AddToScheme(scheme)
 	_ = addonsv1.AddToScheme(scheme)
 	_ = apiextensionsv1.AddToScheme(scheme)
+	_ = kubeadmv1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 

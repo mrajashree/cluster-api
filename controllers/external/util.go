@@ -242,3 +242,12 @@ func IsInitialized(obj *unstructured.Unstructured) (bool, error) {
 	}
 	return initialized && found, nil
 }
+
+func IsExternalEtcdCreated(obj *unstructured.Unstructured) (bool, error) {
+	created, found, err := unstructured.NestedBool(obj.Object, "status", "creationComplete")
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to determine if %v %q has been created",
+			obj.GroupVersionKind(), obj.GetName())
+	}
+	return created && found, nil
+}

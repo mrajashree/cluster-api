@@ -183,6 +183,7 @@ func (r *ClusterReconciler) reconcile(ctx context.Context, cluster *clusterv1.Cl
 		r.reconcileControlPlane,
 		r.reconcileKubeconfig,
 		r.reconcileControlPlaneInitialized,
+		r.reconcileEtcdCluster,
 	}
 
 	res := ctrl.Result{}

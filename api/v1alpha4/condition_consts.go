@@ -64,6 +64,9 @@ const (
 	// the current readiness of the cluster's control plane.
 	ControlPlaneInitializedCondition ConditionType = "ControlPlaneInitialized"
 
+	ManagedExternalEtcdClusterInitializedCondition ConditionType = "ManagedEtcdInitialized"
+	ManagedExternalEtcdClusterReadyCondition       ConditionType = "ManagedEtcdReady"
+
 	// MissingNodeRefReason (Severity=Info) documents a cluster waiting for at least one control plane Machine to have
 	// its node reference populated.
 	MissingNodeRefReason = "MissingNodeRef"
@@ -82,6 +85,10 @@ const (
 	// to be available.
 	// NOTE: This reason is used only as a fallback when the control plane object is not reporting its own ready condition.
 	WaitingForControlPlaneFallbackReason = "WaitingForControlPlane"
+
+	// WaitingForEtcdClusterInitializedReason (Severity=Info) documents a cluster waiting for the etcd cluster
+	// to breport successful control plane initialization.
+	WaitingForEtcdClusterInitializedReason = "WaitingForEtcdClusterProviderInitialized"
 
 	// WaitingForControlPlaneAvailableReason (Severity=Info) documents a Cluster API object
 	// waiting for the control plane machine to be available.

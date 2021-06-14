@@ -71,8 +71,8 @@ providers = {
         "image": "gcr.io/k8s-staging-cluster-api/capd-manager",
         "live_reload_deps": [
             "main.go",
-            "go.mod",
-            "go.sum",
+            "../../go.mod",
+            "../../go.sum",
             "api",
             "cloudinit",
             "controllers",
@@ -126,7 +126,7 @@ def load_provider_tiltfiles():
 
 tilt_helper_dockerfile_header = """
 # Tilt image
-FROM golang:1.16.2 as tilt-helper
+FROM golang:1.16.4 as tilt-helper
 # Support live reloading with Tilt
 RUN wget --output-document /restart.sh --quiet https://raw.githubusercontent.com/windmilleng/rerun-process-wrapper/master/restart.sh  && \
     wget --output-document /start.sh --quiet https://raw.githubusercontent.com/windmilleng/rerun-process-wrapper/master/start.sh && \

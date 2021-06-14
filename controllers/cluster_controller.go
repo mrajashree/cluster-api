@@ -183,6 +183,7 @@ func (r *ClusterReconciler) reconcile(ctx context.Context, cluster *clusterv1.Cl
 		r.reconcileControlPlane,
 		r.reconcileKubeconfig,
 		r.reconcileControlPlaneInitialized,
+		r.reconcileEtcdCluster,
 	}
 
 	res := ctrl.Result{}
@@ -422,7 +423,7 @@ func (c clusterDescendants) filterOwnedDescendants(cluster *clusterv1.Cluster) (
 		obj := o.(client.Object)
 		acc, err := meta.Accessor(obj)
 		if err != nil {
-			return nil
+			return nil // nolint:nilerr // We don't want to exit the EachListItem loop, just continue
 		}
 
 		if util.IsOwnedByObject(acc, cluster) {

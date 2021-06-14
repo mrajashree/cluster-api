@@ -64,6 +64,9 @@ const (
 	// the current readiness of the cluster's control plane.
 	ControlPlaneInitializedCondition ConditionType = "ControlPlaneInitialized"
 
+	ManagedExternalEtcdClusterInitializedCondition ConditionType = "ManagedEtcdInitialized"
+	ManagedExternalEtcdClusterReadyCondition       ConditionType = "ManagedEtcdReady"
+
 	// MissingNodeRefReason (Severity=Info) documents a cluster waiting for at least one control plane Machine to have
 	// its node reference populated.
 	MissingNodeRefReason = "MissingNodeRef"
@@ -72,7 +75,7 @@ const (
 	// provider to report successful control plane initialization.
 	WaitingForControlPlaneProviderInitializedReason = "WaitingForControlPlaneProviderInitialized"
 
-	// ControlPlaneReady reports the ready condition from the control plane object defined for this cluster.
+	// ControlPlaneReadyCondition reports the ready condition from the control plane object defined for this cluster.
 	// This condition is mirrored from the Ready condition in the control plane ref object, and
 	// the absence of this condition might signal problems in the reconcile external loops or the fact that
 	// the control plane provider does not not implements the Ready condition yet.
@@ -82,6 +85,10 @@ const (
 	// to be available.
 	// NOTE: This reason is used only as a fallback when the control plane object is not reporting its own ready condition.
 	WaitingForControlPlaneFallbackReason = "WaitingForControlPlane"
+
+	// WaitingForEtcdClusterInitializedReason (Severity=Info) documents a cluster waiting for the etcd cluster
+	// to breport successful control plane initialization.
+	WaitingForEtcdClusterInitializedReason = "WaitingForEtcdClusterProviderInitialized"
 
 	// WaitingForControlPlaneAvailableReason (Severity=Info) documents a Cluster API object
 	// waiting for the control plane machine to be available.
@@ -197,7 +204,7 @@ const (
 	// allowed to remediate any Machines or whether it is blocked from remediating any further.
 	RemediationAllowedCondition ConditionType = "RemediationAllowed"
 
-	// TooManyUnhealthy is the reason used when too many Machines are unhealthy and the MachineHealthCheck is blocked
+	// TooManyUnhealthyReason is the reason used when too many Machines are unhealthy and the MachineHealthCheck is blocked
 	// from making any further remediations.
 	TooManyUnhealthyReason = "TooManyUnhealthy"
 )

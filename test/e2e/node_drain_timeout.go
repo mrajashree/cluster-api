@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 )
 
-// NodeDrainTimeoutInput is the input for NodeDrainTimeoutSpec.
+// NodeDrainTimeoutSpecInput is the input for NodeDrainTimeoutSpec.
 type NodeDrainTimeoutSpecInput struct {
 	E2EConfig             *clusterctl.E2EConfig
 	ClusterctlConfigPath  string
@@ -96,9 +96,10 @@ func NodeDrainTimeoutSpec(ctx context.Context, inputGetter func() NodeDrainTimeo
 		cluster := clusterResources.Cluster
 		controlplane = clusterResources.ControlPlane
 		machineDeployments = clusterResources.MachineDeployments
+		Expect(machineDeployments[0].Spec.Replicas).To(Equal(pointer.Int32Ptr(1)))
 
 		By("Add a deployment with unevictable pods and podDisruptionBudget to the workload cluster. The deployed pods cannot be evicted in the node draining process.")
-		workloadClusterProxy := input.BootstrapClusterProxy.GetWorkloadCluster(context.TODO(), cluster.Namespace, cluster.Name)
+		workloadClusterProxy := input.BootstrapClusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name)
 		framework.DeployUnevictablePod(ctx, framework.DeployUnevictablePodInput{
 			WorkloadClusterProxy:               workloadClusterProxy,
 			DeploymentName:                     fmt.Sprintf("%s-%s", "unevictable-pod", util.RandomString(3)),

@@ -20,10 +20,21 @@ spec:
         - /manager
         args:
         - "--leader-elect"
-        - "--metrics-bind-addr=127.0.0.1:8080"
         - "--feature-gates=MachinePool=${EXP_MACHINE_POOL:=false}"
         image: controller:latest
         name: manager
+        ports:
+        - containerPort: 9440
+          name: healthz
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: healthz
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
       terminationGracePeriodSeconds: 10
       serviceAccountName: manager
       tolerations:

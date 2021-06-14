@@ -38,20 +38,7 @@ rules:
   - bootstrap.cluster.x-k8s.io
   - controlplane.cluster.x-k8s.io
   - infrastructure.cluster.x-k8s.io
-  resources:
-  - '*'
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - bootstrap.cluster.x-k8s.io
-  - exp.infrastructure.cluster.x-k8s.io
-  - infrastructure.cluster.x-k8s.io
+  - etcdcluster.cluster.x-k8s.io
   resources:
   - '*'
   verbs:
@@ -107,6 +94,19 @@ rules:
   - machinehealthchecks
   - machinehealthchecks/status
   verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machinepools
+  - machinepools/status
+  verbs:
+  - create
+  - delete
   - get
   - list
   - patch
@@ -178,29 +178,4 @@ rules:
   - get
   - list
   - patch
-  - watch
-- apiGroups:
-  - exp.cluster.x-k8s.io
-  resources:
-  - '*'
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - exp.cluster.x-k8s.io
-  resources:
-  - machinepools
-  - machinepools/status
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
   - watch

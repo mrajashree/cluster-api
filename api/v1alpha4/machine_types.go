@@ -29,6 +29,8 @@ const (
 	// MachineControlPlaneLabelName is the label set on machines or related objects that are part of a control plane.
 	MachineControlPlaneLabelName = "cluster.x-k8s.io/control-plane"
 
+	EtcdPlaneLabelName = "cluster.x-k8s.io/etcd-plane"
+
 	// ExcludeNodeDrainingAnnotation annotation explicitly skips node draining if set.
 	ExcludeNodeDrainingAnnotation = "machine.cluster.x-k8s.io/exclude-node-draining"
 
@@ -210,7 +212,7 @@ func (m *MachineStatus) GetTypedPhase() MachinePhase {
 
 // ANCHOR: Bootstrap
 
-// Bootstrap capsulates fields to configure the Machine’s bootstrapping mechanism.
+// Bootstrap encapsulates fields to configure the Machine’s bootstrapping mechanism.
 type Bootstrap struct {
 	// ConfigRef is a reference to a bootstrap provider-specific resource
 	// that holds configuration details. The reference is optional to
@@ -245,10 +247,12 @@ type Machine struct {
 	Status MachineStatus `json:"status,omitempty"`
 }
 
+// GetConditions returns the set of conditions for this object.
 func (m *Machine) GetConditions() Conditions {
 	return m.Status.Conditions
 }
 
+// SetConditions sets the conditions on this object.
 func (m *Machine) SetConditions(conditions Conditions) {
 	m.Status.Conditions = conditions
 }

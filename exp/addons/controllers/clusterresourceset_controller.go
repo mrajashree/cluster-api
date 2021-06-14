@@ -50,6 +50,7 @@ import (
 )
 
 var (
+	// ErrSecretTypeNotSupported signals that a Secret is not supported.
 	ErrSecretTypeNotSupported = errors.New("unsupported secret type")
 )
 
@@ -85,7 +86,7 @@ func (r *ClusterResourceSetReconciler) SetupWithManager(ctx context.Context, mgr
 			handler.EnqueueRequestsFromMapFunc(r.resourceToClusterResourceSet),
 			builder.OnlyMetadata,
 			builder.WithPredicates(
-				resourcepredicates.AddonsSecretCreate(ctrl.LoggerFrom(ctx)),
+				resourcepredicates.ResourceCreate(ctrl.LoggerFrom(ctx)),
 			),
 		).
 		WithOptions(options).
@@ -406,8 +407,8 @@ func (r *ClusterResourceSetReconciler) patchOwnerRefToResource(ctx context.Conte
 		UID:        clusterResourceSet.GetUID(),
 	}
 
-	refs := resource.GetOwnerReferences()
 	if !util.IsOwnedByObject(resource, clusterResourceSet) {
+		refs := resource.GetOwnerReferences()
 		patch := client.MergeFrom(resource.DeepCopy())
 		refs = append(refs, newRef)
 		resource.SetOwnerReferences(refs)

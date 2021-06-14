@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package mdutil implements MachineDeployment utilities.
 package mdutil
 
 import (
@@ -38,6 +39,8 @@ import (
 )
 
 const (
+	// DefaultMachineDeploymentUniqueLabelKey is the label applied to Machines
+	// in a MachineDeployment containing the hash of the template.
 	DefaultMachineDeploymentUniqueLabelKey = "machine-template-hash"
 
 	// FailedMSCreateReason is added in a machine deployment when it cannot create a new machine set.
@@ -48,9 +51,6 @@ const (
 	// estimated once a deployment is paused.
 	PausedDeployReason = "DeploymentPaused"
 
-	//
-	// Available:
-	//
 	// MinimumReplicasAvailable is added in a deployment when it has its minimum replicas required available.
 	MinimumReplicasAvailable = "MinimumReplicasAvailable"
 	// MinimumReplicasUnavailable is added in a deployment when it doesn't have the minimum required replicas
@@ -223,7 +223,7 @@ func SetNewMachineSetAnnotations(deployment *clusterv1.MachineDeployment, newMS 
 			logger.Error(err, "Updating machine set revision OldRevision not int")
 			return false
 		}
-		//If the MS annotation is empty then initialise it to 0
+		// If the MS annotation is empty then initialise it to 0
 		oldRevisionInt = 0
 	}
 	newRevisionInt, err := strconv.ParseInt(newRevision, 10, 64)
@@ -300,7 +300,7 @@ func SetReplicasAnnotations(ms *clusterv1.MachineSet, desiredReplicas, maxReplic
 	return updated
 }
 
-// AnnotationsNeedUpdate return true if ReplicasAnnotations need to be updated.
+// ReplicasAnnotationsNeedUpdate return true if the replicas annotation needs to be updated.
 func ReplicasAnnotationsNeedUpdate(ms *clusterv1.MachineSet, desiredReplicas, maxReplicas int32) bool {
 	if ms.Annotations == nil {
 		return true
@@ -527,12 +527,13 @@ func DeploymentComplete(deployment *clusterv1.MachineDeployment, newStatus *clus
 // NewMSNewReplicas calculates the number of replicas a deployment's new MS should have.
 // When one of the following is true, we're rolling out the deployment; otherwise, we're scaling it.
 // 1) The new MS is saturated: newMS's replicas == deployment's replicas
-// 2) Max number of machines allowed is reached: deployment's replicas + maxSurge == all MSs' replicas.
+// 2) For RollingUpdateStrategy: Max number of machines allowed is reached: deployment's replicas + maxSurge == all MSs' replicas.
+// 3) For OnDeleteStrategy: Max number of machines allowed is reached: deployment's replicas == all MSs' replicas.
 func NewMSNewReplicas(deployment *clusterv1.MachineDeployment, allMSs []*clusterv1.MachineSet, newMS *clusterv1.MachineSet) (int32, error) {
 	switch deployment.Spec.Strategy.Type {
 	case clusterv1.RollingUpdateMachineDeploymentStrategyType:
 		// Check if we can scale up.
-		maxSurge, err := intstrutil.GetValueFromIntOrPercent(deployment.Spec.Strategy.RollingUpdate.MaxSurge, int(*(deployment.Spec.Replicas)), true)
+		maxSurge, err := intstrutil.GetScaledValueFromIntOrPercent(deployment.Spec.Strategy.RollingUpdate.MaxSurge, int(*(deployment.Spec.Replicas)), true)
 		if err != nil {
 			return 0, err
 		}
@@ -547,6 +548,17 @@ func NewMSNewReplicas(deployment *clusterv1.MachineDeployment, allMSs []*cluster
 		scaleUpCount := maxTotalMachines - currentMachineCount
 		// Do not exceed the number of desired replicas.
 		scaleUpCount = integer.Int32Min(scaleUpCount, *(deployment.Spec.Replicas)-*(newMS.Spec.Replicas))
+		return *(newMS.Spec.Replicas) + scaleUpCount, nil
+	case clusterv1.OnDeleteMachineDeploymentStrategyType:
+		// Find the total number of machines
+		currentMachineCount := TotalMachineSetsReplicaSum(allMSs)
+		if currentMachineCount >= *(deployment.Spec.Replicas) {
+			// Cannot scale up as more replicas exist than desired number of replicas in the MachineDeployment.
+			return *(newMS.Spec.Replicas), nil
+		}
+		// Scale up the latest MachineSet so the total amount of replicas across all MachineSets match
+		// the desired number of replicas in the MachineDeployment
+		scaleUpCount := *(deployment.Spec.Replicas) - currentMachineCount
 		return *(newMS.Spec.Replicas) + scaleUpCount, nil
 	default:
 		return 0, fmt.Errorf("deployment strategy %v isn't supported", deployment.Spec.Strategy.Type)
@@ -581,11 +593,11 @@ func IsSaturated(deployment *clusterv1.MachineDeployment, ms *clusterv1.MachineS
 // 2 desired, max unavailable 0%, surge 1% - should scale new(+1), then old(-1), then new(+1), then old(-1)
 // 1 desired, max unavailable 0%, surge 1% - should scale new(+1), then old(-1).
 func ResolveFenceposts(maxSurge, maxUnavailable *intstrutil.IntOrString, desired int32) (int32, int32, error) {
-	surge, err := intstrutil.GetValueFromIntOrPercent(maxSurge, int(desired), true)
+	surge, err := intstrutil.GetScaledValueFromIntOrPercent(maxSurge, int(desired), true)
 	if err != nil {
 		return 0, 0, err
 	}
-	unavailable, err := intstrutil.GetValueFromIntOrPercent(maxUnavailable, int(desired), false)
+	unavailable, err := intstrutil.GetScaledValueFromIntOrPercent(maxUnavailable, int(desired), false)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -622,7 +634,7 @@ func FilterMachineSets(mSes []*clusterv1.MachineSet, filterFn filterMS) []*clust
 	return filtered
 }
 
-// Clones the given map and returns a new map with the given key and value added.
+// CloneAndAddLabel clones the given map and returns a new map with the given key and value added.
 // Returns the given map, if labelKey is empty.
 func CloneAndAddLabel(labels map[string]string, labelKey, labelValue string) map[string]string {
 	if labelKey == "" {
@@ -638,7 +650,7 @@ func CloneAndAddLabel(labels map[string]string, labelKey, labelValue string) map
 	return newLabels
 }
 
-// Clones the given selector and returns a new selector with the given key and value added.
+// CloneSelectorAndAddLabel clones the given selector and returns a new selector with the given key and value added.
 // Returns the given selector, if labelKey is empty.
 func CloneSelectorAndAddLabel(selector *metav1.LabelSelector, labelKey, labelValue string) *metav1.LabelSelector {
 	if labelKey == "" {
@@ -692,8 +704,21 @@ func DeepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 	printer.Fprintf(hasher, "%#v", objectToWrite)
 }
 
+// ComputeHash computes the has of a MachineTemplateSpec.
 func ComputeHash(template *clusterv1.MachineTemplateSpec) uint32 {
 	machineTemplateSpecHasher := fnv.New32a()
 	DeepHashObject(machineTemplateSpecHasher, *template)
 	return machineTemplateSpecHasher.Sum32()
+}
+
+// GetDeletingMachineCount gets the number of machines that are in the process of being deleted
+// in a machineList.
+func GetDeletingMachineCount(machineList *clusterv1.MachineList) int32 {
+	var deletingMachineCount int32
+	for _, machine := range machineList.Items {
+		if !machine.GetDeletionTimestamp().IsZero() {
+			deletingMachineCount++
+		}
+	}
+	return deletingMachineCount
 }

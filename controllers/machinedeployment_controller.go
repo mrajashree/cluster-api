@@ -195,8 +195,19 @@ func (r *MachineDeploymentReconciler) reconcile(ctx context.Context, cluster *cl
 		return ctrl.Result{}, r.sync(ctx, d, msList)
 	}
 
+	if d.Spec.Strategy == nil {
+		return ctrl.Result{}, errors.Errorf("missing MachineDeployment strategy")
+	}
+
 	if d.Spec.Strategy.Type == clusterv1.RollingUpdateMachineDeploymentStrategyType {
+		if d.Spec.Strategy.RollingUpdate == nil {
+			return ctrl.Result{}, errors.Errorf("missing MachineDeployment settings for strategy type: %s", d.Spec.Strategy.Type)
+		}
 		return ctrl.Result{}, r.rolloutRolling(ctx, d, msList)
+	}
+
+	if d.Spec.Strategy.Type == clusterv1.OnDeleteMachineDeploymentStrategyType {
+		return ctrl.Result{}, r.rolloutOnDelete(ctx, d, msList)
 	}
 
 	return ctrl.Result{}, errors.Errorf("unexpected deployment strategy type: %s", d.Spec.Strategy.Type)
@@ -295,7 +306,7 @@ func (r *MachineDeploymentReconciler) getMachineDeploymentsForMachineSet(ctx con
 	return deployments
 }
 
-// MachineSetTodeployments is a handler.ToRequestsFunc to be used to enqeue requests for reconciliation
+// MachineSetToDeployments is a handler.ToRequestsFunc to be used to enqueue requests for reconciliation
 // for MachineDeployments that might adopt an orphaned MachineSet.
 func (r *MachineDeploymentReconciler) MachineSetToDeployments(o client.Object) []ctrl.Request {
 	result := []ctrl.Request{}

@@ -46,17 +46,11 @@ func (c *clusterctlClient) GetProvidersConfig() ([]Provider, error) {
 }
 
 func (c *clusterctlClient) GetProviderComponents(provider string, providerType clusterctlv1.ProviderType, options ComponentsOptions) (Components, error) {
-	// ComponentsOptions is an alias for repository.ComponentsOptions; this makes the conversion
-	inputOptions := repository.ComponentsOptions{
-		Version:           options.Version,
-		TargetNamespace:   options.TargetNamespace,
-		WatchingNamespace: options.WatchingNamespace,
-		SkipVariables:     options.SkipVariables,
-	}
-	components, err := c.getComponentsByName(provider, providerType, inputOptions)
+	components, err := c.getComponentsByName(provider, providerType, repository.ComponentsOptions(options))
 	if err != nil {
 		return nil, err
 	}
+
 	return components, nil
 }
 
@@ -223,19 +217,14 @@ func (c *clusterctlClient) GetClusterTemplate(options GetClusterTemplateOptions)
 	}
 
 	// Gets  the client for the current management cluster
-	cluster, err := c.clusterClientFactory(ClusterClientFactoryInput{options.Kubeconfig, options.YamlProcessor})
+	clusterClient, err := c.clusterClientFactory(ClusterClientFactoryInput{options.Kubeconfig, options.YamlProcessor})
 	if err != nil {
-		return nil, err
-	}
-
-	// Ensure this command only runs against management clusters with the current Cluster API contract.
-	if err := cluster.ProviderInventory().CheckCAPIContract(); err != nil {
 		return nil, err
 	}
 
 	// If the option specifying the targetNamespace is empty, try to detect it.
 	if options.TargetNamespace == "" {
-		currentNamespace, err := cluster.Proxy().CurrentNamespace()
+		currentNamespace, err := clusterClient.Proxy().CurrentNamespace()
 		if err != nil {
 			return nil, err
 		}
@@ -252,13 +241,22 @@ func (c *clusterctlClient) GetClusterTemplate(options GetClusterTemplateOptions)
 
 	// Gets the workload cluster template from the selected source
 	if options.ProviderRepositorySource != nil {
-		return c.getTemplateFromRepository(cluster, options)
+		// Ensure this command only runs against management clusters with the current Cluster API contract.
+		// NOTE: This command tolerates also not existing cluster (Kubeconfig.Path=="") or clusters not yet initialized in order to allow
+		// users to dry-run the command and take a look at what the cluster will look like; in both scenarios, it is required
+		// to pass provider:version given that auto-discovery can't work without a provider inventory installed in a cluster.
+		if options.Kubeconfig.Path != "" {
+			if err := clusterClient.ProviderInventory().CheckCAPIContract(cluster.AllowCAPINotInstalled{}); err != nil {
+				return nil, err
+			}
+		}
+		return c.getTemplateFromRepository(clusterClient, options)
 	}
 	if options.ConfigMapSource != nil {
-		return c.getTemplateFromConfigMap(cluster, *options.ConfigMapSource, options.TargetNamespace, options.ListVariablesOnly)
+		return c.getTemplateFromConfigMap(clusterClient, *options.ConfigMapSource, options.TargetNamespace, options.ListVariablesOnly)
 	}
 	if options.URLSource != nil {
-		return c.getTemplateFromURL(cluster, *options.URLSource, options.TargetNamespace, options.ListVariablesOnly)
+		return c.getTemplateFromURL(clusterClient, *options.URLSource, options.TargetNamespace, options.ListVariablesOnly)
 	}
 
 	return nil, errors.New("unable to read custom template. Please specify a template source")
@@ -307,15 +305,15 @@ func (c *clusterctlClient) getTemplateFromRepository(cluster cluster.Client, opt
 			}
 		}
 
-		defaultProviderVersion, err := cluster.ProviderInventory().GetDefaultProviderVersion(name, clusterctlv1.InfrastructureProviderType)
+		inventoryVersion, err := cluster.ProviderInventory().GetProviderVersion(name, clusterctlv1.InfrastructureProviderType)
 		if err != nil {
 			return nil, err
 		}
 
-		if defaultProviderVersion == "" {
-			return nil, errors.Errorf("failed to identify the default version for the provider %q. Please specify a version", name)
+		if inventoryVersion == "" {
+			return nil, errors.Errorf("Unable to identify version for the provider %q automatically. Please specify a version", name)
 		}
-		version = defaultProviderVersion
+		version = inventoryVersion
 	}
 
 	// Get the template from the template repository.

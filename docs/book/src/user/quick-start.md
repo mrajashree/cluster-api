@@ -38,6 +38,8 @@ Choose one of the options below:
 
    **Minimum [kind] supported version**: v0.9.0
 
+   Note for macOS users: you may need to [increase the memory available](https://docs.docker.com/docker-for-mac/#resources) for containers (recommend 6Gb for CAPD).
+
    </aside>
 
    [kind] can be used for creating a local Kubernetes cluster for development environments or for
@@ -161,10 +163,9 @@ before getting started with Cluster API. See below for the expected settings for
 {{#tabs name:"tab-installation-infrastructure" tabs:"AWS,Azure,DigitalOcean,Docker,GCP,vSphere,OpenStack,Metal3,Packet"}}
 {{#tab AWS}}
 
-Download the latest binary of `clusterawsadm` from the [AWS provider releases] and make sure to place it in your path. You need at least version v0.5.5 for these instructions.
-Instructions for older versions of clusterawsadm are available in [Github][legacy-clusterawsadm].
+Download the latest binary of `clusterawsadm` from the [AWS provider releases] and make sure to place it in your path.
 
-The clusterawsadm command line utility assists with identity and access management (IAM) for Cluster API Provider AWS.
+The [clusterawsadm] command line utility assists with identity and access management (IAM) for [Cluster API Provider AWS][capa].
 
 ```bash
 export AWS_REGION=us-east-1 # This is used to help encode your environment variables
@@ -320,7 +321,7 @@ Your management cluster has been initialized successfully!
 
 You can now create your first workload cluster by running the following:
 
-  clusterctl config cluster [name] --kubernetes-version [version] | kubectl apply -f -
+  clusterctl generate cluster [name] --kubernetes-version [version] | kubectl apply -f -
 ```
 
 <aside class="note">
@@ -340,13 +341,13 @@ Once the management cluster is ready, you can create your first workload cluster
 
 #### Preparing the workload cluster configuration
 
-The `clusterctl config cluster` command returns a YAML template for creating a [workload cluster].
+The `clusterctl generate cluster` command returns a YAML template for creating a [workload cluster].
 
 <aside class="note">
 
 <h1> Which provider will be used for my cluster? </h1>
 
-The `clusterctl config cluster` command uses smart defaults in order to simplify the user experience; in this example,
+The `clusterctl generate cluster` command uses smart defaults in order to simplify the user experience; in this example,
 it detects that there is only an `aws` infrastructure provider and so it uses that when creating the cluster.
 
 </aside>
@@ -355,10 +356,10 @@ it detects that there is only an `aws` infrastructure provider and so it uses th
 
 <h1> What topology will be used for my cluster? </h1>
 
-The `clusterctl config cluster` command by default uses cluster templates which are provided by the infrastructure
+The `clusterctl generate cluster` command by default uses cluster templates which are provided by the infrastructure
 providers. See the provider's documentation for more information.
 
-See the `clusterctl config cluster` [command][clusterctl config cluster] documentation for
+See the `clusterctl generate cluster` [command][clusterctl generate cluster] documentation for
 details about how to use alternative sources. for cluster templates.
 
 </aside>
@@ -368,7 +369,7 @@ details about how to use alternative sources. for cluster templates.
 Depending on the infrastructure provider you are planning to use, some additional prerequisites should be satisfied
 before configuring a cluster with Cluster API. Instructions are provided for common providers below.
 
-Otherwise, you can look at the `clusterctl config cluster` [command][clusterctl config cluster] documentation for details about how to
+Otherwise, you can look at the `clusterctl generate cluster` [command][clusterctl generate cluster] documentation for details about how to
 discover the list of variables required by a cluster templates.
 
 {{#tabs name:"tab-configuration-infrastructure" tabs:"AWS,Azure,DigitalOcean,Docker,GCP,vSphere,OpenStack,Metal3,Packet"}}
@@ -491,7 +492,7 @@ Depending on your OpenStack and underlying hypervisor the following options migh
 
 To see all required OpenStack environment variables execute:
 ```bash
-clusterctl config cluster --infrastructure openstack --list-variables capi-quickstart
+clusterctl generate cluster --infrastructure openstack --list-variables capi-quickstart
 ```
 
 The following script can be used to export some of them:
@@ -517,7 +518,7 @@ export OPENSTACK_IMAGE_NAME=<image name>
 export OPENSTACK_SSH_KEY_NAME=<ssh key pair name>
 ```
 
-A full configuration reference can be found in [configuration.md](https://github.com/kubernetes-sigs/cluster-api-provider-openstack/blob/master/docs/configuration.md).
+A full configuration reference can be found in [configuration.md](https://github.com/kubernetes-sigs/cluster-api-provider-openstack/blob/master/docs/book/src/clusteropenstack/configuration.md).
 
 {{#/tab }}
 {{#tab Metal3}}
@@ -577,7 +578,7 @@ For the purpose of this tutorial, we'll name our cluster capi-quickstart.
 {{#tab Azure|AWS|DigitalOcean|GCP|vSphere|OpenStack|Metal3|Packet}}
 
 ```bash
-clusterctl config cluster capi-quickstart \
+clusterctl generate cluster capi-quickstart \
   --kubernetes-version v1.19.7 \
   --control-plane-machine-count=3 \
   --worker-machine-count=3 \
@@ -596,7 +597,7 @@ The Docker provider is not designed for production use and is intended for devel
 </aside>
 
 ```bash
-clusterctl config cluster capi-quickstart --flavor development \
+clusterctl generate cluster capi-quickstart --flavor development \
   --kubernetes-version v1.19.7 \
   --control-plane-machine-count=3 \
   --worker-machine-count=3 \
@@ -611,7 +612,7 @@ Machine Deployments, etc.
 
 The file can be eventually modified using your editor of choice.
 
-See [clusterctl config cluster] for more details.
+See [clusterctl generate cluster] for more details.
 
 #### Apply the workload cluster
 
@@ -737,7 +738,11 @@ kubectl --kubeconfig=./capi-quickstart.kubeconfig get nodes
 Delete workload cluster.
 ```bash
 kubectl delete cluster capi-quickstart
-```
+```        
+<aside class="note warning">
+
+IMPORTANT: In order to ensure a proper cleanup of your infrastructure you must always delete the cluster object. Deleting the entire cluster template with `kubectl delete -f capi-quickstart.yaml` might lead to pending resources to be cleaned up manually.
+</aside>
 
 Delete management cluster
 ```bash
@@ -751,24 +756,24 @@ See the [clusterctl] documentation for more detail about clusterctl supported ac
 <!-- links -->
 [AWS provider prerequisites]: https://cluster-api-aws.sigs.k8s.io/topics/using-clusterawsadm-to-fulfill-prerequisites.html
 [AWS provider releases]: https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases
-[Azure Provider Prerequisites]: https://github.com/kubernetes-sigs/cluster-api-provider-azure/blob/master/docs/getting-started.md#prerequisites
+[Azure Provider Prerequisites]: https://capz.sigs.k8s.io/topics/getting-started.html#prerequisites
 [bootstrap cluster]: ../reference/glossary.md#bootstrap-cluster
+[capa]: https://cluster-api-aws.sigs.k8s.io
 [capv-upload-images]: https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/blob/master/docs/getting_started.md#uploading-the-machine-images
-[clusterctl config cluster]: ../clusterctl/commands/config-cluster.md
+[clusterawsadm]: https://cluster-api-aws.sigs.k8s.io/clusterawsadm/clusterawsadm.html
+[clusterctl generate cluster]: ../clusterctl/commands/generate-cluster.md
 [clusterctl get kubeconfig]: ../clusterctl/commands/get-kubeconfig.md
 [clusterctl]: ../clusterctl/overview.md
 [Docker]: https://www.docker.com/
-[docker-provider]: ../clusterctl/developers.md#additional-steps-for-the-docker-provider
 [GCP provider]: https://github.com/kubernetes-sigs/cluster-api-provider-gcp
 [infrastructure provider]: ../reference/glossary.md#infrastructure-provider
 [kind]: https://kind.sigs.k8s.io/
 [KubeadmControlPlane]: ../developer/architecture/controllers/control-plane.md
 [kubectl]: https://kubernetes.io/docs/tasks/tools/install-kubectl/
 [management cluster]: ../reference/glossary.md#management-cluster
-[Metal3 provider]: https://github.com/metal3-io/cluster-api-provider-metal3/
 [Metal3 getting started guide]: https://github.com/metal3-io/cluster-api-provider-metal3/blob/master/docs/getting-started.md
+[Metal3 provider]: https://github.com/metal3-io/cluster-api-provider-metal3/
 [Packet getting started guide]: https://github.com/kubernetes-sigs/cluster-api-provider-packet#using
 [provider components]: ../reference/glossary.md#provider-components
-[vSphere getting started guide]: https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/
+[vSphere getting started guide]: https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/blob/master/docs/getting_started.md
 [workload cluster]: ../reference/glossary.md#workload-cluster
-[legacy-clusterawsadm]: https://github.com/kubernetes-sigs/cluster-api/blob/v0.3.6/docs/book/src/user/quick-start.md#initialization-for-common-providers

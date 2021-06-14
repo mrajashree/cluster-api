@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package kubetest implmements kubetest functionality.
 package kubetest
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
@@ -27,10 +29,11 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/cluster-api/test/framework"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -38,6 +41,7 @@ const (
 	ciArtifactImage = "gcr.io/k8s-staging-ci-images/conformance"
 )
 
+// Export Ginkgo constants.
 const (
 	DefaultGinkgoNodes            = 1
 	DefaultGinkoSlowSpecThreshold = 120
@@ -109,12 +113,11 @@ func Run(ctx context.Context, input RunInput) error {
 		"slowSpecThreshold": strconv.Itoa(input.GinkgoSlowSpecThreshold),
 	}
 
-	// Copy configuration files for kubetest into the artifacts directory
-	// to avoid issues with volume mounts on MacOS
-	tmpConfigFilePath := path.Join(kubetestConfigDir, "viper-config.yaml")
-	if err := copyFile(input.ConfigFilePath, tmpConfigFilePath); err != nil {
+	config, err := parseKubetestConfig(input.ConfigFilePath)
+	if err != nil {
 		return err
 	}
+
 	tmpKubeConfigPath, err := dockeriseKubeconfig(kubetestConfigDir, input.ClusterProxy.GetKubeconfigPath())
 	if err != nil {
 		return err
@@ -136,7 +139,6 @@ func Run(ctx context.Context, input RunInput) error {
 		"dump-logs-on-failure": "false",
 		"report-prefix":        "kubetest.",
 		"num-nodes":            strconv.FormatInt(int64(input.NumberOfNodes), 10),
-		"viper-config":         "/tmp/viper-config.yaml",
 	}
 	ginkgoArgs := buildArgs(ginkgoVars, "-")
 	e2eArgs := buildArgs(e2eVars, "--")
@@ -145,31 +147,46 @@ func Run(ctx context.Context, input RunInput) error {
 	}
 	kubeConfigVolumeMount := volumeArg(tmpKubeConfigPath, "/tmp/kubeconfig")
 	outputVolumeMount := volumeArg(reportDir, "/output")
-	viperVolumeMount := volumeArg(tmpConfigFilePath, "/tmp/viper-config.yaml")
 	user, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "unable to determine current user")
 	}
 	userArg := user.Uid + ":" + user.Gid
+	entrypointArg := "--entrypoint=/usr/local/bin/ginkgo"
 	networkArg := "--network=kind"
-	e2eCmd := exec.Command("docker", "run", "--user", userArg, kubeConfigVolumeMount, outputVolumeMount, viperVolumeMount, "-t", networkArg)
+	e2eCmd := exec.Command("docker", "run", "--user", userArg, entrypointArg, kubeConfigVolumeMount, outputVolumeMount, "-t", networkArg)
 	if len(testRepoListVolumeArgs) > 0 {
 		e2eCmd.Args = append(e2eCmd.Args, testRepoListVolumeArgs...)
 	}
 	e2eCmd.Args = append(e2eCmd.Args, input.ConformanceImage)
-	e2eCmd.Args = append(e2eCmd.Args, "/usr/local/bin/ginkgo")
 	e2eCmd.Args = append(e2eCmd.Args, ginkgoArgs...)
 	e2eCmd.Args = append(e2eCmd.Args, "/usr/local/bin/e2e.test")
 	e2eCmd.Args = append(e2eCmd.Args, "--")
 	e2eCmd.Args = append(e2eCmd.Args, e2eArgs...)
+	e2eCmd.Args = append(e2eCmd.Args, config.toFlags()...)
 	e2eCmd = framework.CompleteCommand(e2eCmd, "Running e2e test", false)
 	if err := e2eCmd.Run(); err != nil {
 		return errors.Wrap(err, "Unable to run conformance tests")
 	}
-	if err := framework.GatherJUnitReports(reportDir, input.ArtifactsDirectory); err != nil {
-		return err
+	return framework.GatherJUnitReports(reportDir, input.ArtifactsDirectory)
+}
+
+type kubetestConfig map[string]string
+
+func (c kubetestConfig) toFlags() []string {
+	return buildArgs(c, "-")
+}
+
+func parseKubetestConfig(kubetestConfigFile string) (kubetestConfig, error) {
+	conf := make(kubetestConfig)
+	data, err := os.ReadFile(kubetestConfigFile)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read kubetest config file %s: %w", kubetestConfigFile, err)
 	}
-	return nil
+	if err := yaml.Unmarshal(data, &conf); err != nil {
+		return nil, fmt.Errorf("unable to parse kubetest config file %s as valid, non-nested YAML: %w", kubetestConfigFile, err)
+	}
+	return conf, nil
 }
 
 func isUsingCIArtifactsVersion(k8sVersion string) bool {
@@ -211,7 +228,7 @@ func dockeriseKubeconfig(kubetestConfigDir string, kubeConfigPath string) (strin
 }
 
 func countClusterNodes(ctx context.Context, proxy framework.ClusterProxy) (int, error) {
-	nodeList, err := proxy.GetClientSet().CoreV1().Nodes().List(ctx, corev1.ListOptions{})
+	nodeList, err := proxy.GetClientSet().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return 0, errors.Wrap(err, "Unable to count nodes")
 	}

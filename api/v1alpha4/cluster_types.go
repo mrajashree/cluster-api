@@ -21,6 +21,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -29,6 +30,8 @@ import (
 )
 
 const (
+	// ClusterFinalizer is the finalizer used by the cluster controller to
+	// cleanup the cluster resources when a Cluster is being deleted.
 	ClusterFinalizer = "cluster.cluster.x-k8s.io"
 )
 
@@ -52,6 +55,11 @@ type ClusterSpec struct {
 	// the details for provisioning the Control Plane for a Cluster.
 	// +optional
 	ControlPlaneRef *corev1.ObjectReference `json:"controlPlaneRef,omitempty"`
+
+	// ManagedExternalEtcdRef is an optional reference to an etcd provider resource that holds details
+	// for provisioning an external etcd cluster
+	// +optional
+	ManagedExternalEtcdRef *corev1.ObjectReference `json:"managedExternalEtcdRef,omitempty"`
 
 	// InfrastructureRef is a reference to a provider-specific resource that holds the details
 	// for provisioning infrastructure for a cluster in said provider.
@@ -87,6 +95,7 @@ type ClusterNetwork struct {
 // ANCHOR_END: ClusterNetwork
 
 // ANCHOR: NetworkRanges
+
 // NetworkRanges represents ranges of network addresses.
 type NetworkRanges struct {
 	CIDRBlocks []string `json:"cidrBlocks"`
@@ -139,6 +148,14 @@ type ClusterStatus struct {
 	// ObservedGeneration is the latest generation observed by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// ManagedExternalEtcdInitialized indicates that first node's IP address is set by machine controller, so etcd members join can commence
+	// +optional
+	ManagedExternalEtcdInitialized bool `json:"managedExternalEtcdInitialized"`
+
+	// ManagedExternalEtcdReady indicates external etcd cluster is fully provisioned
+	// +optional
+	ManagedExternalEtcdReady bool `json:"managedExternalEtcdReady"`
 }
 
 // ANCHOR_END: ClusterStatus
@@ -207,12 +224,98 @@ type Cluster struct {
 	Status ClusterStatus `json:"status,omitempty"`
 }
 
+// GetConditions returns the set of conditions for this object.
 func (c *Cluster) GetConditions() Conditions {
 	return c.Status.Conditions
 }
 
+// SetConditions sets the conditions on this object.
 func (c *Cluster) SetConditions(conditions Conditions) {
 	c.Status.Conditions = conditions
+}
+
+// GetIPFamily returns a ClusterIPFamily from the configuration provided.
+func (c *Cluster) GetIPFamily() (ClusterIPFamily, error) {
+	var podCIDRs, serviceCIDRs []string
+	if c.Spec.ClusterNetwork != nil {
+		if c.Spec.ClusterNetwork.Pods != nil {
+			podCIDRs = c.Spec.ClusterNetwork.Pods.CIDRBlocks
+		}
+		if c.Spec.ClusterNetwork.Services != nil {
+			serviceCIDRs = c.Spec.ClusterNetwork.Services.CIDRBlocks
+		}
+	}
+	if len(podCIDRs) == 0 && len(serviceCIDRs) == 0 {
+		return IPv4IPFamily, nil
+	}
+
+	podsIPFamily, err := ipFamilyForCIDRStrings(podCIDRs)
+	if err != nil {
+		return InvalidIPFamily, fmt.Errorf("pods: %s", err)
+	}
+	if len(serviceCIDRs) == 0 {
+		return podsIPFamily, nil
+	}
+
+	servicesIPFamily, err := ipFamilyForCIDRStrings(serviceCIDRs)
+	if err != nil {
+		return InvalidIPFamily, fmt.Errorf("services: %s", err)
+	}
+	if len(podCIDRs) == 0 {
+		return servicesIPFamily, nil
+	}
+
+	if podsIPFamily == DualStackIPFamily {
+		return DualStackIPFamily, nil
+	} else if podsIPFamily != servicesIPFamily {
+		return InvalidIPFamily, errors.New("pods and services IP family mismatch")
+	}
+
+	return podsIPFamily, nil
+}
+
+func ipFamilyForCIDRStrings(cidrs []string) (ClusterIPFamily, error) {
+	if len(cidrs) > 2 {
+		return InvalidIPFamily, errors.New("too many CIDRs specified")
+	}
+	var foundIPv4 bool
+	var foundIPv6 bool
+	for _, cidr := range cidrs {
+		ip, _, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return InvalidIPFamily, fmt.Errorf("could not parse CIDR: %s", err)
+		}
+		if ip.To4() != nil {
+			foundIPv4 = true
+		} else {
+			foundIPv6 = true
+		}
+	}
+	switch {
+	case foundIPv4 && foundIPv6:
+		return DualStackIPFamily, nil
+	case foundIPv4:
+		return IPv4IPFamily, nil
+	case foundIPv6:
+		return IPv6IPFamily, nil
+	default:
+		return InvalidIPFamily, nil
+	}
+}
+
+// ClusterIPFamily defines the types of supported IP families.
+type ClusterIPFamily int
+
+// Define the ClusterIPFamily constants.
+const (
+	InvalidIPFamily ClusterIPFamily = iota
+	IPv4IPFamily
+	IPv6IPFamily
+	DualStackIPFamily
+)
+
+func (f ClusterIPFamily) String() string {
+	return [...]string{"InvalidIPFamily", "IPv4IPFamily", "IPv6IPFamily", "DualStackIPFamily"}[f]
 }
 
 // +kubebuilder:object:root=true

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package fake implements testing fakes.
 package fake
 
 import (
@@ -22,7 +23,7 @@ import (
 	"go.etcd.io/etcd/clientv3"
 )
 
-type FakeEtcdClient struct {
+type FakeEtcdClient struct { //nolint:revive
 	AlarmResponse        *clientv3.AlarmResponse
 	EtcdEndpoints        []string
 	MemberListResponse   *clientv3.MemberListResponse

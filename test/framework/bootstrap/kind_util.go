@@ -42,6 +42,9 @@ type CreateKindBootstrapClusterAndLoadImagesInput struct {
 
 	// Images to be loaded in the cluster (this is kind specific)
 	Images []clusterctl.ContainerImage
+
+	// IPFamily is either ipv4 or ipv6. Default is ipv4.
+	IPFamily string
 }
 
 // CreateKindBootstrapClusterAndLoadImages returns a new Kubernetes cluster with pre-loaded images.
@@ -55,6 +58,10 @@ func CreateKindBootstrapClusterAndLoadImages(ctx context.Context, input CreateKi
 	if input.RequiresDockerSock {
 		options = append(options, WithDockerSockMount())
 	}
+	if input.IPFamily == "IPv6" {
+		options = append(options, WithIPv6Family())
+	}
+
 	clusterProvider := NewKindClusterProvider(input.Name, options...)
 	Expect(clusterProvider).ToNot(BeNil(), "Failed to create a kind cluster")
 
@@ -152,7 +159,7 @@ func save(ctx context.Context, image, dest string) error {
 // copied from kind https://github.com/kubernetes-sigs/kind/blob/v0.7.0/pkg/cmd/kind/load/docker-image/docker-image.go#L158
 // loads an image tarball onto a node.
 func load(imageTarName string, node kindnodes.Node) error {
-	f, err := os.Open(imageTarName)
+	f, err := os.Open(filepath.Clean(imageTarName))
 	if err != nil {
 		return errors.Wrap(err, "failed to open image")
 	}

@@ -35,6 +35,8 @@ spec:
         volumeMounts:
           - mountPath: /var/run/docker.sock
             name: dockersock
+          - mountPath: /usr/bin/docker
+            name: dockerbin
         securityContext:
           privileged: true
       terminationGracePeriodSeconds: 10
@@ -45,3 +47,7 @@ spec:
         - name: dockersock
           hostPath:
             path: /var/run/docker.sock
+        - name: dockerbin
+          hostPath:
+            path: /usr/bin/docker
+

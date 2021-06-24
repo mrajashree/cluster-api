@@ -6,49 +6,37 @@
 package bottlerocket
 
 import (
-	"encoding/base64"
 	"fmt"
-	"strings"
 
-	capbk "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
+	"sigs.k8s.io/cluster-api/bootstrap/kubeadm/internal/cloudinit"
 )
 
-type ControlPlaneInput struct {
-	BootstrapSettings     string
-	KubernetesSettings    string
-	HostContainerSettings string
-}
+const (
+	controlPlaneBootstrapContainerTemplate = `{{.Header}}
+{{template "files" .WriteFiles}}
+-   path: /tmp/kubeadm.yaml
+    owner: root:root
+    permissions: '0640'
+    content: |
+      ---
+{{.ClusterConfiguration | Indent 6}}
+      ---
+{{.InitConfiguration | Indent 6}}
+`
+)
 
-func NewInitControlPlane(cloudinitInput string, sshAuthUsers []capbk.User) ([]byte, error) {
-	// Parse ssh auth keys
-	keys := ""
-	for _, user := range sshAuthUsers {
-		for _, key := range user.SSHAuthorizedKeys {
-			keys += "\"" + key + "\","
-		}
+// NewInitControlPlane will take the cloudinit's controlplane input as an argument
+// and generate the bottlerocket toml formatted userdata for the host node, which
+// has the settings for bootstrap container which has its own embedded base64 encoded userdata.
+func NewInitControlPlane(input *cloudinit.ControlPlaneInput) ([]byte, error) {
+	input.Header = cloudConfigHeader
+	input.WriteFiles = input.Certificates.AsFiles()
+	input.WriteFiles = append(input.WriteFiles, input.AdditionalFiles...)
+	bootstrapContainerUserData, err := generateBootstrapContainerUserData("InitBootstrapContainer", controlPlaneBootstrapContainerTemplate, input)
+	if err != nil {
+		return nil, err
 	}
-	authInitData := fmt.Sprintf("{\"ssh\":{\"authorized-keys\":[%s]}}\n", strings.TrimRight(keys, ","))
-	b64AuthInitString := base64.StdEncoding.EncodeToString([]byte(authInitData))
+	fmt.Println(string(bootstrapContainerUserData))
 
-	cpInput := new(ControlPlaneInput)
-	cpInput.BootstrapSettings = fmt.Sprintf(`[settings.host-containers.kubeadm-the-hard-way]
-enabled = true
-superpowered = true
-source = "public.ecr.aws/k1e6s8o8/kubeadm-the-hard-way:0.0.1"
-user-data = "%s"
-`, cloudinitInput)
-
-	cpInput.KubernetesSettings = `[settings.kubernetes]
-cluster-domain = "cluster.local"
-standalone-mode = true
-authentication-mode = "tls"
-server-tls-bootstrap = false`
-
-	// TODO: replace user data??
-	cpInput.HostContainerSettings = fmt.Sprintf(`[settings.host-containers.admin]
-enabled = true
-user-data = "%s"`, b64AuthInitString)
-
-	userData := fmt.Sprintf("%s%s\n%s", cpInput.BootstrapSettings, cpInput.KubernetesSettings, cpInput.HostContainerSettings)
-	return []byte(userData), nil
+	return getBottlerocketNodeUserData(bootstrapContainerUserData, input.Users)
 }

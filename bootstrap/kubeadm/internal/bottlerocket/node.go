@@ -1,9 +1,32 @@
 package bottlerocket
 
-import capbk "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
+import (
+	"fmt"
+	"sigs.k8s.io/cluster-api/bootstrap/kubeadm/internal/cloudinit"
+)
 
-// Worker node configuration for bottlerocket is as same as for controlplane
-// Only the cloudinit userdata is different, which cloudinit package handles
-func NewNode(cloudinitInput string, sshAuthKeys []capbk.User) ([]byte, error) {
-	return NewInitControlPlane(cloudinitInput, sshAuthKeys)
+const (
+	nodeBottleRocketInit = `{{template "files" .WriteFiles}}
+-   path: /tmp/kubeadm-join-config.yaml
+    owner: root:root
+    permissions: '0640'
+    content: |
+      ---
+{{.JoinConfiguration | Indent 6}}
+runcmd:
+  - {{ .KubeadmCommand }}
+`
+)
+
+// NewNode creates a toml formatted userdata including bootstrap host container settings that has
+// a base64 encoded user data for the bootstrap container
+func NewNode(input *cloudinit.NodeInput) ([]byte, error) {
+	input.KubeadmCommand = fmt.Sprintf(standardJoinCommand, input.KubeadmVerbosity)
+	input.WriteFiles = append(input.WriteFiles, input.AdditionalFiles...)
+	bootstrapContainerUserData, err := generateBootstrapContainerUserData("Node", nodeBottleRocketInit, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return getBottlerocketNodeUserData(bootstrapContainerUserData, input.Users)
 }

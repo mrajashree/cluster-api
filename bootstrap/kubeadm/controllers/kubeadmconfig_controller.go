@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strconv"
 	"time"
@@ -451,20 +450,16 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 	}
 
 	var bootstrapInitData []byte
-	bootstrapInitData, err = cloudinit.NewInitControlPlane(controlPlaneInput)
-	if err != nil {
-		scope.Error(err, "Failed to generate cloud init for bootstrap control plane")
-		return ctrl.Result{}, err
-	}
-
-	// Consume the created cloudinit controlplane data and create the bottlerocket cloudinit data
 	if scope.Config.Spec.Format == bootstrapv1.Bottlerocket {
-		// Convert the cloudinit to base64 encoding before using it
-		b64BootStrapCloudInit := base64.StdEncoding.EncodeToString(bootstrapInitData)
-
-		bootstrapInitData, err = bottlerocket.NewInitControlPlane(b64BootStrapCloudInit, scope.Config.Spec.Users)
+		bootstrapInitData, err = bottlerocket.NewInitControlPlane(controlPlaneInput)
 		if err != nil {
 			scope.Error(err, "Failed to generate cloud init for bottlerocket bootstrap control plane")
+			return ctrl.Result{}, err
+		}
+	} else {
+		bootstrapInitData, err = cloudinit.NewInitControlPlane(controlPlaneInput)
+		if err != nil {
+			scope.Error(err, "Failed to generate cloud init for bootstrap control plane")
 			return ctrl.Result{}, err
 		}
 	}
@@ -530,7 +525,7 @@ func (r *KubeadmConfigReconciler) joinWorker(ctx context.Context, scope *Scope) 
 		return ctrl.Result{}, err
 	}
 
-	cloudJoinData, err := cloudinit.NewNode(&cloudinit.NodeInput{
+	cloudJoinInput := &cloudinit.NodeInput{
 		BaseUserData: cloudinit.BaseUserData{
 			AdditionalFiles:      files,
 			NTP:                  scope.Config.Spec.NTP,
@@ -543,19 +538,19 @@ func (r *KubeadmConfigReconciler) joinWorker(ctx context.Context, scope *Scope) 
 			UseExperimentalRetry: scope.Config.Spec.UseExperimentalRetryJoin,
 		},
 		JoinConfiguration: joinData,
-	})
-	if err != nil {
-		scope.Error(err, "Failed to create a worker join configuration")
-		return ctrl.Result{}, err
 	}
 
-	// Consume the join cloudinit to generate Bottlerocket cloudinit for worker
+	var cloudJoinData []byte
 	if scope.Config.Spec.Format == bootstrapv1.Bottlerocket {
-		// Convert the cloudinit to base64 encoding before using it
-		b64BootStrapCloudInit := base64.StdEncoding.EncodeToString(cloudJoinData)
-		cloudJoinData, err = bottlerocket.NewNode(b64BootStrapCloudInit, scope.Config.Spec.Users)
+		cloudJoinData, err = bottlerocket.NewNode(cloudJoinInput)
 		if err != nil {
 			scope.Error(err, "Failed to create a worker bottlerocket join configuration")
+			return ctrl.Result{}, err
+		}
+	} else {
+		cloudJoinData, err = cloudinit.NewNode(cloudJoinInput)
+		if err != nil {
+			scope.Error(err, "Failed to create a worker join configuration")
 			return ctrl.Result{}, err
 		}
 	}
@@ -624,7 +619,7 @@ func (r *KubeadmConfigReconciler) joinControlplane(ctx context.Context, scope *S
 		return ctrl.Result{}, err
 	}
 
-	cloudJoinData, err := cloudinit.NewJoinControlPlane(&cloudinit.ControlPlaneJoinInput{
+	cloudJoinInput := &cloudinit.ControlPlaneJoinInput{
 		JoinConfiguration: joinData,
 		Certificates:      certificates,
 		BaseUserData: cloudinit.BaseUserData{
@@ -638,19 +633,19 @@ func (r *KubeadmConfigReconciler) joinControlplane(ctx context.Context, scope *S
 			KubeadmVerbosity:     verbosityFlag,
 			UseExperimentalRetry: scope.Config.Spec.UseExperimentalRetryJoin,
 		},
-	})
-	if err != nil {
-		scope.Error(err, "Failed to create a control plane join configuration")
-		return ctrl.Result{}, err
 	}
 
-	// Consume the created cloudinit controlplane data and create the bottlerocket cloudinit data
+	var cloudJoinData []byte
 	if scope.Config.Spec.Format == bootstrapv1.Bottlerocket {
-		// Convert the cloudinit to base64 encoding before using it
-		b64BootStrapCloudInit := base64.StdEncoding.EncodeToString(cloudJoinData)
-		cloudJoinData, err = bottlerocket.NewInitControlPlane(b64BootStrapCloudInit, scope.Config.Spec.Users)
+		cloudJoinData, err = bottlerocket.NewJoinControlPlane(cloudJoinInput)
 		if err != nil {
 			scope.Error(err, "Failed to generate cloud init for bottlerocket bootstrap control plane")
+			return ctrl.Result{}, err
+		}
+	} else {
+		cloudJoinData, err = cloudinit.NewJoinControlPlane(cloudJoinInput)
+		if err != nil {
+			scope.Error(err, "Failed to create a control plane join configuration")
 			return ctrl.Result{}, err
 		}
 	}

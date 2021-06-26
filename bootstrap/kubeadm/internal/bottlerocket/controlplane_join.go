@@ -12,8 +12,7 @@ const (
     permissions: '0640'
     content: |
 {{.JoinConfiguration | Indent 6}}
-runcmd:
-  - {{ .KubeadmCommand }}
+runcmd: "ControlPlaneJoin"
 `
 )
 

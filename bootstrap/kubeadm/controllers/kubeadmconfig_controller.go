@@ -403,6 +403,34 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 	// injects into config.ClusterConfiguration values from top level object
 	r.reconcileTopLevelObjectSettings(ctx, scope.Cluster, machine, scope.Config)
 
+	// Add extra config to cluster config for bottlerocket
+	if scope.Config.Spec.Format == bootstrapv1.Bottlerocket {
+		// Add certificates dir
+		if scope.Config.Spec.ClusterConfiguration.CertificatesDir == "" {
+			scope.Config.Spec.ClusterConfiguration.CertificatesDir = "/var/lib/kubeadm/pki"
+		}
+
+		// Add controllerManager extra volumes
+		scope.Config.Spec.ClusterConfiguration.ControllerManager.ExtraVolumes = append(scope.Config.Spec.ClusterConfiguration.ControllerManager.ExtraVolumes,
+			bootstrapv1.HostPathMount{
+				Name:      "kubeconfig",
+				HostPath:  "/var/lib/kubeadm/controller-manager.conf",
+				MountPath: "/etc/kubernetes/controller-manager.conf",
+				ReadOnly:  true,
+				PathType:  "File",
+			})
+
+		// Add scheduler extraVol
+		scope.Config.Spec.ClusterConfiguration.Scheduler.ExtraVolumes = append(scope.Config.Spec.ClusterConfiguration.Scheduler.ExtraVolumes,
+			bootstrapv1.HostPathMount{
+				Name:      "kubeconfig",
+				HostPath:  "/var/lib/kubeadm/scheduler.conf",
+				MountPath: "/etc/kubernetes/scheduler.conf",
+				ReadOnly:  true,
+				PathType:  "File",
+			})
+	}
+
 	clusterdata, err := kubeadmtypes.MarshalClusterConfigurationForVersion(scope.Config.Spec.ClusterConfiguration, parsedVersion)
 	if err != nil {
 		scope.Error(err, "Failed to marshal cluster configuration")

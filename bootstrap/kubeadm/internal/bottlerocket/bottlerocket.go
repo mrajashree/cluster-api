@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"github.com/pkg/errors"
 	"strings"
 	"text/template"
 
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
+
+	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -21,6 +23,11 @@ const (
 type BottlerocketSettingsInput struct {
 	BootstrapContainerUserData string
 	AdminContainerUserData     string
+}
+
+type HostPath struct {
+	Path string
+	Type string
 }
 
 func generateBootstrapContainerUserData(kind string, tpl string, data interface{}) ([]byte, error) {
@@ -122,4 +129,33 @@ func getAllAuthorizedKeys(users []bootstrapv1.User) string {
 		}
 	}
 	return strings.Join(sshAuthorizedKeys, ",")
+}
+
+func patchKubeVipFile(writeFiles []bootstrapv1.File) ([]bootstrapv1.File, error) {
+	for _, file := range writeFiles {
+		if file.Path == "/etc/kubernetes/manifests/kube-vip.yaml" {
+			// unmarshal the yaml file from contents
+			var yamlData map[string]interface{}
+			err := yaml.Unmarshal([]byte(file.Content), &yamlData)
+			if err != nil {
+				return nil, errors.Wrap(err, "Error unmarshalling yaml content from kube-vip")
+			}
+
+			// Patch the spec.Volume mount path
+			spec := yamlData["spec"].(map[interface{}]interface{})
+			volumes := spec["volumes"].([]interface{})
+			currentVol := volumes[0].(map[interface{}]interface{})
+			hostPath := currentVol["hostPath"].(map[interface{}]interface{})
+			hostPath["type"] = "File"
+			hostPath["path"] = "/var/lib/kubeadm/admin.conf"
+
+			// Marshall back into yaml and override
+			patchedYaml, err := yaml.Marshal(&yamlData)
+			if err != nil {
+				return nil, errors.Wrap(err, "Error marshalling patched kube-vip yaml")
+			}
+			file.Content = string(patchedYaml)
+		}
+	}
+	return writeFiles, nil
 }

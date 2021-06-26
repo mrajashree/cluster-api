@@ -13,8 +13,7 @@ const (
     content: |
       ---
 {{.JoinConfiguration | Indent 6}}
-runcmd:
-  - {{ .KubeadmCommand }}
+runcmd: "WorkerJoin"
 `
 )
 

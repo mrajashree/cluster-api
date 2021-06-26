@@ -8,6 +8,7 @@ package bottlerocket
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"sigs.k8s.io/cluster-api/bootstrap/kubeadm/internal/cloudinit"
 )
 
@@ -22,6 +23,7 @@ const (
 {{.ClusterConfiguration | Indent 6}}
       ---
 {{.InitConfiguration | Indent 6}}
+runcmd: "ControlPlaneInit"
 `
 )
 
@@ -32,6 +34,12 @@ func NewInitControlPlane(input *cloudinit.ControlPlaneInput) ([]byte, error) {
 	input.Header = cloudConfigHeader
 	input.WriteFiles = input.Certificates.AsFiles()
 	input.WriteFiles = append(input.WriteFiles, input.AdditionalFiles...)
+
+	var err error
+	input.WriteFiles, err = patchKubeVipFile(input.WriteFiles)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to patch kube-vip manifest file")
+	}
 	bootstrapContainerUserData, err := generateBootstrapContainerUserData("InitBootstrapContainer", controlPlaneBootstrapContainerTemplate, input)
 	if err != nil {
 		return nil, err

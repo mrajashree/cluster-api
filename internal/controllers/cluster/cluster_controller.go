@@ -89,6 +89,15 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, opt
 		return errors.Wrap(err, "failed setting up with a controller manager")
 	}
 
+	err = controller.Watch(
+		&source.Kind{Type: &clusterv1.Cluster{}},
+		handler.EnqueueRequestsFromMapFunc(r.etcdMachineToCluster),
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "failed adding Watch for Clusters on etcd machines to controller manager")
+	}
+
 	r.recorder = mgr.GetEventRecorderFor("cluster-controller")
 	r.externalTracker = external.ObjectTracker{
 		Controller: controller,
@@ -193,6 +202,7 @@ func (r *Reconciler) reconcile(ctx context.Context, cluster *clusterv1.Cluster) 
 		r.reconcileControlPlane,
 		r.reconcileKubeconfig,
 		r.reconcileControlPlaneInitialized,
+		r.reconcileEtcdCluster,
 	}
 
 	res := ctrl.Result{}
@@ -516,6 +526,31 @@ func (r *Reconciler) controlPlaneMachineToCluster(o client.Object) []ctrl.Reques
 	}
 
 	if conditions.IsTrue(cluster, clusterv1.ControlPlaneInitializedCondition) {
+		return nil
+	}
+
+	return []ctrl.Request{{
+		NamespacedName: util.ObjectKey(cluster),
+	}}
+}
+
+// etcdMachineToCluster is a handler.ToRequestsFunc to be used to enqueue requests for reconciliation
+// for Cluster to update its status.ManagedExternalEtcdInitialized field
+func (r *Reconciler) etcdMachineToCluster(o client.Object) []ctrl.Request {
+	m, ok := o.(*clusterv1.Machine)
+	if !ok {
+		panic(fmt.Sprintf("Expected a Machine but got a %T", o))
+	}
+	if !util.IsEtcdMachine(m) {
+		return nil
+	}
+
+	cluster, err := util.GetClusterByName(context.TODO(), r.Client, m.Namespace, m.Spec.ClusterName)
+	if err != nil {
+		return nil
+	}
+
+	if cluster.Status.ManagedExternalEtcdInitialized {
 		return nil
 	}
 

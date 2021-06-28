@@ -39,6 +39,7 @@ rules:
   - bootstrap.cluster.x-k8s.io
   - controlplane.cluster.x-k8s.io
   - infrastructure.cluster.x-k8s.io
+  - etcdcluster.cluster.x-k8s.io
   resources:
   - '*'
   verbs:

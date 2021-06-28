@@ -320,10 +320,15 @@ func (r *DockerMachineReconciler) reconcileNormal(ctx context.Context, cluster *
 	// Usually a cloud provider will do this, but there is no docker-cloud provider.
 	// Requeue if there is an error, as this is likely momentary load balancer
 	// state changes during control plane provisioning.
-	if err := externalMachine.SetNodeProviderID(ctx); err != nil {
-		r.Log.Error(err, "failed to patch the Kubernetes node with the machine providerID")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	if _, ok := machine.Labels[clusterv1.MachineEtcdClusterLabelName]; !ok {
+		if err := externalMachine.SetNodeProviderID(ctx); err != nil {
+			r.Log.Error(err, "failed to patch the Kubernetes node with the machine providerID")
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		}
 	}
+
+	// In case of an etcd cluster, there is no concept of kubernetes node. So we can generate the node Provider ID and set it on machine spec directly
+
 	// Set ProviderID so the Cluster API Machine Controller can pull it
 	providerID := externalMachine.ProviderID()
 	dockerMachine.Spec.ProviderID = &providerID

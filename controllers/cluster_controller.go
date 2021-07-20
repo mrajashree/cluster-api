@@ -172,6 +172,7 @@ func patchCluster(ctx context.Context, patchHelper *patch.Helper, cluster *clust
 		conditions.WithConditions(
 			clusterv1.ControlPlaneReadyCondition,
 			clusterv1.InfrastructureReadyCondition,
+			clusterv1.ManagedExternalEtcdClusterReadyCondition,
 		),
 	)
 
@@ -183,6 +184,7 @@ func patchCluster(ctx context.Context, patchHelper *patch.Helper, cluster *clust
 			clusterv1.ReadyCondition,
 			clusterv1.ControlPlaneReadyCondition,
 			clusterv1.InfrastructureReadyCondition,
+			clusterv1.ManagedExternalEtcdClusterReadyCondition,
 		}},
 	)
 	return patchHelper.Patch(ctx, cluster, options...)
@@ -300,6 +302,37 @@ func (r *ClusterReconciler) reconcileDelete(ctx context.Context, cluster *cluste
 		}
 	}
 
+	if cluster.Spec.ManagedExternalEtcdRef != nil {
+		obj, err := external.Get(ctx, r.Client, cluster.Spec.ManagedExternalEtcdRef, cluster.Namespace)
+		switch {
+		case apierrors.IsNotFound(errors.Cause(err)):
+			// Etcd cluster has been deleted
+			conditions.MarkFalse(cluster, clusterv1.ManagedExternalEtcdClusterReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "")
+		case err != nil:
+			return ctrl.Result{}, errors.Wrapf(err, "failed to get %s %q for Cluster %s/%s",
+				path.Join(cluster.Spec.ManagedExternalEtcdRef.APIVersion, cluster.Spec.ManagedExternalEtcdRef.Kind),
+				cluster.Spec.ManagedExternalEtcdRef.Name, cluster.Namespace, cluster.Name)
+		default:
+			// Report a summary of current status of the external etcd object defined for this cluster.
+			conditions.SetMirror(cluster, clusterv1.ManagedExternalEtcdClusterReadyCondition,
+				conditions.UnstructuredGetter(obj),
+				conditions.WithFallbackValue(false, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, ""),
+			)
+
+			// Issue a deletion request for the infrastructure object.
+			// Once it's been deleted, the cluster will get processed again.
+			if err := r.Client.Delete(ctx, obj); err != nil {
+				return ctrl.Result{}, errors.Wrapf(err,
+					"failed to delete %v %q for Cluster %q in namespace %q",
+					obj.GroupVersionKind(), obj.GetName(), cluster.Name, cluster.Namespace)
+			}
+
+			// Return here so we don't remove the finalizer yet.
+			logger.Info("Cluster still has descendants - need to requeue", "managedExternalEtcdRef", cluster.Spec.ManagedExternalEtcdRef.Name)
+			return ctrl.Result{}, nil
+		}
+	}
+
 	if cluster.Spec.InfrastructureRef != nil {
 		obj, err := external.Get(ctx, r.Client, cluster.Spec.InfrastructureRef, cluster.Namespace)
 		switch {
@@ -340,6 +373,7 @@ type clusterDescendants struct {
 	machineSets          clusterv1.MachineSetList
 	controlPlaneMachines clusterv1.MachineList
 	workerMachines       clusterv1.MachineList
+	etcdMachines         clusterv1.MachineList
 	machinePools         expv1alpha3.MachinePoolList
 }
 
@@ -360,6 +394,13 @@ func (c *clusterDescendants) descendantNames() string {
 	}
 	if len(controlPlaneMachineNames) > 0 {
 		descendants = append(descendants, "Control plane machines: "+strings.Join(controlPlaneMachineNames, ","))
+	}
+	etcdMachines := make([]string, len(c.etcdMachines.Items))
+	for i, etcdMachine := range c.etcdMachines.Items {
+		etcdMachines[i] = etcdMachine.Name
+	}
+	if len(etcdMachines) > 0 {
+		descendants = append(descendants, "Etcd machines: "+strings.Join(etcdMachines, ","))
 	}
 	machineDeploymentNames := make([]string, len(c.machineDeployments.Items))
 	for i, machineDeployment := range c.machineDeployments.Items {
@@ -427,14 +468,13 @@ func (r *ClusterReconciler) listDescendants(ctx context.Context, cluster *cluste
 	// Only count control plane machines as descendants if there is no control plane provider.
 	if cluster.Spec.ControlPlaneRef == nil {
 		descendants.controlPlaneMachines = *controlPlaneMachines
-
 	}
 
 	return descendants, nil
 }
 
 // filterOwnedDescendants returns an array of runtime.Objects containing only those descendants that have the cluster
-// as an owner reference, with control plane machines sorted last.
+// as an owner reference, with control plane machines sorted last. If cluster has external etcd machines then those are sorted last.
 func (c clusterDescendants) filterOwnedDescendants(cluster *clusterv1.Cluster) ([]runtime.Object, error) {
 	var ownedDescendants []runtime.Object
 	eachFunc := func(o runtime.Object) error {
@@ -442,7 +482,6 @@ func (c clusterDescendants) filterOwnedDescendants(cluster *clusterv1.Cluster) (
 		if err != nil {
 			return nil
 		}
-
 		if util.IsOwnedByObject(acc, cluster) {
 			ownedDescendants = append(ownedDescendants, o)
 		}
@@ -455,6 +494,9 @@ func (c clusterDescendants) filterOwnedDescendants(cluster *clusterv1.Cluster) (
 		&c.machineSets,
 		&c.workerMachines,
 		&c.controlPlaneMachines,
+	}
+	if cluster.Spec.ManagedExternalEtcdRef != nil {
+		lists = append(lists, &c.etcdMachines)
 	}
 	if feature.Gates.Enabled(feature.MachinePool) {
 		lists = append([]runtime.Object{&c.machinePools}, lists...)
@@ -477,6 +519,9 @@ func splitMachineList(list *clusterv1.MachineList) (*clusterv1.MachineList, *clu
 		machine := &list.Items[i]
 		if util.IsControlPlaneMachine(machine) {
 			controlplanes.Items = append(controlplanes.Items, *machine)
+		} else if util.IsEtcdMachine(machine) {
+			// don't add etcd machine to descendants list
+			continue
 		} else {
 			nodes.Items = append(nodes.Items, *machine)
 		}

@@ -439,6 +439,15 @@ func (r *KubeadmControlPlaneReconciler) reconcileDelete(ctx context.Context, clu
 	}
 	ownedMachines := allMachines.Filter(collections.OwnedMachines(kcp))
 
+	if cluster.Spec.ManagedExternalEtcdRef != nil {
+		for _, machine := range allMachines {
+			if util.IsEtcdMachine(machine) {
+				// remove external etcd-only machines from the "allMachines" collection so that the controlplane machines don't wait for etcd to be deleted first
+				delete(allMachines, machine.Name)
+			}
+		}
+	}
+
 	// If no control plane machines remain, remove the finalizer
 	if len(ownedMachines) == 0 {
 		controllerutil.RemoveFinalizer(kcp, controlplanev1.KubeadmControlPlaneFinalizer)

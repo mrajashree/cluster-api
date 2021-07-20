@@ -562,6 +562,15 @@ func (b *machineBuilder) controlPlane() *machineBuilder {
 	return b
 }
 
+func (b *machineBuilder) etcd() *machineBuilder {
+	b.m.Labels = map[string]string{clusterv1.MachineEtcdClusterLabelName: ""}
+	return b
+}
+
+type machinePoolBuilder struct {
+	mp expv1.MachinePool
+}
+
 func (b *machineBuilder) build() clusterv1.Machine {
 	return b.m
 }
@@ -628,6 +637,9 @@ func TestFilterOwnedDescendants(t *testing.T) {
 	mp3NotOwnedByCluster := newMachinePoolBuilder().named("mp3").build()
 	mp4OwnedByCluster := newMachinePoolBuilder().named("mp4").ownedBy(&c).build()
 
+	me1EtcdOwnedByCluster := newMachineBuilder().named("me1").ownedBy(&c).etcd().build()
+	me2EtcdNotOwnedByCluster := newMachineBuilder().named("me2").build()
+
 	d := clusterDescendants{
 		machineDeployments: clusterv1.MachineDeploymentList{
 			Items: []clusterv1.MachineDeployment{
@@ -667,6 +679,12 @@ func TestFilterOwnedDescendants(t *testing.T) {
 				mp4OwnedByCluster,
 			},
 		},
+		etcdMachines: clusterv1.MachineList{
+			Items: []clusterv1.Machine{
+				me1EtcdOwnedByCluster,
+				me2EtcdNotOwnedByCluster,
+			},
+		},
 	}
 
 	actual, err := d.filterOwnedDescendants(&c)
@@ -683,6 +701,7 @@ func TestFilterOwnedDescendants(t *testing.T) {
 		&m5OwnedByCluster,
 		&m3ControlPlaneOwnedByCluster,
 		&m6ControlPlaneOwnedByCluster,
+		&me1EtcdOwnedByCluster,
 	}
 
 	g.Expect(actual).To(Equal(expected))

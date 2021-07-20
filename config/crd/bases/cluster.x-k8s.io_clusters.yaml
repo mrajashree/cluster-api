@@ -1072,9 +1072,9 @@ spec:
                   provider.
                 type: boolean
               managedExternalEtcdInitialized:
-                description: ManagedExternalEtcdInitialized indicates that first node's
-                  IP address is set by machine controller, so etcd members join can
-                  commence
+                description: ManagedExternalEtcdInitialized indicates that first etcd
+                  member's IP address is set by machine controller, so remaining etcd
+                  members can lookup the address to join the cluster
                 type: boolean
               managedExternalEtcdReady:
                 description: ManagedExternalEtcdReady indicates external etcd cluster

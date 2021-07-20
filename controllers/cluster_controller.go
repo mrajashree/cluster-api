@@ -167,6 +167,7 @@ func patchCluster(ctx context.Context, patchHelper *patch.Helper, cluster *clust
 		conditions.WithConditions(
 			clusterv1.ControlPlaneReadyCondition,
 			clusterv1.InfrastructureReadyCondition,
+			clusterv1.ManagedExternalEtcdClusterReadyCondition,
 		),
 	)
 
@@ -178,6 +179,7 @@ func patchCluster(ctx context.Context, patchHelper *patch.Helper, cluster *clust
 			clusterv1.ReadyCondition,
 			clusterv1.ControlPlaneReadyCondition,
 			clusterv1.InfrastructureReadyCondition,
+			clusterv1.ManagedExternalEtcdClusterReadyCondition,
 		}},
 	)
 	return patchHelper.Patch(ctx, cluster, options...)
@@ -298,6 +300,37 @@ func (r *ClusterReconciler) reconcileDelete(ctx context.Context, cluster *cluste
 		}
 	}
 
+	if cluster.Spec.ManagedExternalEtcdRef != nil {
+		obj, err := external.Get(ctx, r.Client, cluster.Spec.ManagedExternalEtcdRef, cluster.Namespace)
+		switch {
+		case apierrors.IsNotFound(errors.Cause(err)):
+			// Etcd cluster has been deleted
+			conditions.MarkFalse(cluster, clusterv1.ManagedExternalEtcdClusterReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "")
+		case err != nil:
+			return ctrl.Result{}, errors.Wrapf(err, "failed to get %s %q for Cluster %s/%s",
+				path.Join(cluster.Spec.ManagedExternalEtcdRef.APIVersion, cluster.Spec.ManagedExternalEtcdRef.Kind),
+				cluster.Spec.ManagedExternalEtcdRef.Name, cluster.Namespace, cluster.Name)
+		default:
+			// Report a summary of current status of the external etcd object defined for this cluster.
+			conditions.SetMirror(cluster, clusterv1.ManagedExternalEtcdClusterReadyCondition,
+				conditions.UnstructuredGetter(obj),
+				conditions.WithFallbackValue(false, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, ""),
+			)
+
+			// Issue a deletion request for the infrastructure object.
+			// Once it's been deleted, the cluster will get processed again.
+			if err := r.Client.Delete(ctx, obj); err != nil {
+				return ctrl.Result{}, errors.Wrapf(err,
+					"failed to delete %v %q for Cluster %q in namespace %q",
+					obj.GroupVersionKind(), obj.GetName(), cluster.Name, cluster.Namespace)
+			}
+
+			// Return here so we don't remove the finalizer yet.
+			logger.Info("Cluster still has descendants - need to requeue", "managedExternalEtcdRef", cluster.Spec.ManagedExternalEtcdRef.Name)
+			return ctrl.Result{}, nil
+		}
+	}
+
 	if cluster.Spec.InfrastructureRef != nil {
 		obj, err := external.Get(ctx, r.Client, cluster.Spec.InfrastructureRef, cluster.Namespace)
 		switch {
@@ -339,6 +372,7 @@ type clusterDescendants struct {
 	controlPlaneMachines clusterv1.MachineList
 	workerMachines       clusterv1.MachineList
 	machinePools         expv1.MachinePoolList
+	etcdMachines         clusterv1.MachineList
 }
 
 // length returns the number of descendants.
@@ -358,6 +392,13 @@ func (c *clusterDescendants) descendantNames() string {
 	}
 	if len(controlPlaneMachineNames) > 0 {
 		descendants = append(descendants, "Control plane machines: "+strings.Join(controlPlaneMachineNames, ","))
+	}
+	etcdMachines := make([]string, len(c.etcdMachines.Items))
+	for i, etcdMachine := range c.etcdMachines.Items {
+		etcdMachines[i] = etcdMachine.Name
+	}
+	if len(etcdMachines) > 0 {
+		descendants = append(descendants, "Etcd machines: "+strings.Join(etcdMachines, ","))
 	}
 	machineDeploymentNames := make([]string, len(c.machineDeployments.Items))
 	for i, machineDeployment := range c.machineDeployments.Items {
@@ -442,7 +483,6 @@ func (c clusterDescendants) filterOwnedDescendants(cluster *clusterv1.Cluster) (
 		if err != nil {
 			return nil // nolint:nilerr // We don't want to exit the EachListItem loop, just continue
 		}
-
 		if util.IsOwnedByObject(acc, cluster) {
 			ownedDescendants = append(ownedDescendants, obj)
 		}
@@ -455,6 +495,9 @@ func (c clusterDescendants) filterOwnedDescendants(cluster *clusterv1.Cluster) (
 		&c.machineSets,
 		&c.workerMachines,
 		&c.controlPlaneMachines,
+	}
+	if cluster.Spec.ManagedExternalEtcdRef != nil {
+		lists = append(lists, &c.etcdMachines)
 	}
 	if feature.Gates.Enabled(feature.MachinePool) {
 		lists = append([]client.ObjectList{&c.machinePools}, lists...)

@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
@@ -173,7 +172,7 @@ func (r *KubeadmControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		endpoint, found, err := unstructured.NestedString(externalEtcd.Object, "status", "endpoint")
+		endpoints, found, err := external.GetExternalEtcdEndpoints(externalEtcd)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrapf(err, "failed to get endpoint field from %v", externalEtcd.GetName())
 		}
@@ -181,11 +180,11 @@ func (r *KubeadmControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.
 			log.Info("Etcd endpoints not available")
 			return ctrl.Result{Requeue: true}, nil
 		}
-		endpoints := strings.Split(endpoint, ",")
-		sort.Strings(endpoints)
-		currentEndpoints := kcp.Spec.KubeadmConfigSpec.ClusterConfiguration.Etcd.External.Endpoints
-		if !reflect.DeepEqual(endpoints, currentEndpoints) {
-			kcp.Spec.KubeadmConfigSpec.ClusterConfiguration.Etcd.External.Endpoints = endpoints
+		currentEtcdEndpoints := strings.Split(endpoints, ",")
+		sort.Strings(currentEtcdEndpoints)
+		currentKCPEndpoints := kcp.Spec.KubeadmConfigSpec.ClusterConfiguration.Etcd.External.Endpoints
+		if !reflect.DeepEqual(currentEtcdEndpoints, currentKCPEndpoints) {
+			kcp.Spec.KubeadmConfigSpec.ClusterConfiguration.Etcd.External.Endpoints = currentEtcdEndpoints
 			if err := patchHelper.Patch(ctx, kcp); err != nil {
 				log.Error(err, "Failed to patch KubeadmControlPlane to update external etcd endpoints")
 				return ctrl.Result{}, err

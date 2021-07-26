@@ -132,6 +132,7 @@ func getAllAuthorizedKeys(users []bootstrapv1.User) string {
 }
 
 func patchKubeVipFile(writeFiles []bootstrapv1.File) ([]bootstrapv1.File, error) {
+	var patchedFiles []bootstrapv1.File
 	for _, file := range writeFiles {
 		if file.Path == "/etc/kubernetes/manifests/kube-vip.yaml" {
 			// unmarshal the yaml file from contents
@@ -156,6 +157,7 @@ func patchKubeVipFile(writeFiles []bootstrapv1.File) ([]bootstrapv1.File, error)
 			}
 			file.Content = string(patchedYaml)
 		}
+		patchedFiles = append(patchedFiles, file)
 	}
-	return writeFiles, nil
+	return patchedFiles, nil
 }

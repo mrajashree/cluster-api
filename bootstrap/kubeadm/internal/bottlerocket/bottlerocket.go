@@ -13,7 +13,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-const(
+const (
 	standardJoinCommand = "kubeadm join --config /tmp/kubeadm-join-config.yaml %s"
 	cloudConfigHeader   = `## template: jinja
 #cloud-config
@@ -21,8 +21,8 @@ const(
 )
 
 type BottlerocketSettingsInput struct {
-	BootstrapContainerUserData	string
-	AdminContainerUserData 		string
+	BootstrapContainerUserData string
+	AdminContainerUserData     string
 }
 
 type HostPath struct {
@@ -90,7 +90,7 @@ func generateNodeUserData(kind string, tpl string, data interface{}) ([]byte, er
 }
 
 // getBottlerocketNodeUserData returns the userdata for the host bottlerocket in toml format
-func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []bootstrapv1.User) ([]byte, error){
+func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []bootstrapv1.User) ([]byte, error) {
 	// base64 encode the bootstrapContainer's user data
 	b64BootstrapContainerUserData := base64.StdEncoding.EncodeToString(bootstrapContainerUserData)
 
@@ -106,7 +106,7 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 
 	bottlerocketInput := &BottlerocketSettingsInput{
 		BootstrapContainerUserData: b64BootstrapContainerUserData,
-		AdminContainerUserData: b64AdminContainerUserData,
+		AdminContainerUserData:     b64AdminContainerUserData,
 	}
 
 	bottlerocketNodeUserData, err := generateNodeUserData("InitBottlerocketNode", bottlerocketNodeInitSettingsTemplate, bottlerocketInput)
@@ -132,6 +132,7 @@ func getAllAuthorizedKeys(users []bootstrapv1.User) string {
 }
 
 func patchKubeVipFile(writeFiles []bootstrapv1.File) ([]bootstrapv1.File, error) {
+	var patchedFiles []bootstrapv1.File
 	for _, file := range writeFiles {
 		if file.Path == "/etc/kubernetes/manifests/kube-vip.yaml" {
 			// unmarshal the yaml file from contents
@@ -156,6 +157,7 @@ func patchKubeVipFile(writeFiles []bootstrapv1.File) ([]bootstrapv1.File, error)
 			}
 			file.Content = string(patchedYaml)
 		}
+		patchedFiles = append(patchedFiles, file)
 	}
-	return writeFiles, nil
+	return patchedFiles, nil
 }

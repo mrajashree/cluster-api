@@ -406,24 +406,26 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 		}
 
 		// Add controllerManager extra volumes
-		scope.Config.Spec.ClusterConfiguration.ControllerManager.ExtraVolumes = append(scope.Config.Spec.ClusterConfiguration.ControllerManager.ExtraVolumes,
-			kubeadmv1beta1.HostPathMount{
+		scope.Config.Spec.ClusterConfiguration.ControllerManager.ExtraVolumes = []kubeadmv1beta1.HostPathMount{
+			{
 				Name: "kubeconfig",
 				HostPath: "/var/lib/kubeadm/controller-manager.conf",
 				MountPath: "/etc/kubernetes/controller-manager.conf",
 				ReadOnly: true,
 				PathType: "File",
-		})
+			},
+		}
 
 		// Add scheduler extraVol
-		scope.Config.Spec.ClusterConfiguration.Scheduler.ExtraVolumes = append(scope.Config.Spec.ClusterConfiguration.Scheduler.ExtraVolumes,
-			kubeadmv1beta1.HostPathMount{
-				Name: "kubeconfig",
-				HostPath: "/var/lib/kubeadm/scheduler.conf",
+		scope.Config.Spec.ClusterConfiguration.Scheduler.ExtraVolumes = []kubeadmv1beta1.HostPathMount{
+			{
+				Name:      "kubeconfig",
+				HostPath:  "/var/lib/kubeadm/scheduler.conf",
 				MountPath: "/etc/kubernetes/scheduler.conf",
-				ReadOnly: true,
-				PathType: "File",
-		})
+				ReadOnly:  true,
+				PathType:  "File",
+			},
+		}
 	}
 
 	clusterdata, err := kubeadmv1beta1.ConfigurationToYAMLForVersion(scope.Config.Spec.ClusterConfiguration, scope.ConfigOwner.KubernetesVersion())

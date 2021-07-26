@@ -57,6 +57,8 @@ github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa h1:OaNxuTZr
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/coredns/caddy v1.1.0 h1:ezvsPrT/tA/7pYDBZxu0cT0VmWk75AfIaf6GSYCNMf0=
 github.com/coredns/caddy v1.1.0/go.mod h1:A6ntJQlAWuQfFlsd9hvigKbo2WS0VUs2l1e2F+BawD4=
+github.com/coredns/corefile-migration v1.0.12-0.20210304171735-2bcdecd9196e h1:Kv4F2GAPv4QbYMuqc5OU6lQucJbU3r9rgVtuEDmV27g=
+github.com/coredns/corefile-migration v1.0.12-0.20210304171735-2bcdecd9196e/go.mod h1:NJOI8ceUF/NTgEwtjD+TUq3/BnH/GF7WAM3RzCa3hBo=
 github.com/coredns/corefile-migration v1.0.12 h1:TJGATo0YLQJVIKJZLajXE1IrhRFtYTR1cYsGIT1YNEk=
 github.com/coredns/corefile-migration v1.0.12/go.mod h1:NJOI8ceUF/NTgEwtjD+TUq3/BnH/GF7WAM3RzCa3hBo=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=

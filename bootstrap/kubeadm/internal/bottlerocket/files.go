@@ -16,4 +16,3 @@ write_files:{{ range . }}
 {{- end -}}
 `
 )
-

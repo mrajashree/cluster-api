@@ -2,6 +2,7 @@ package bottlerocket
 
 import (
 	"fmt"
+
 	"sigs.k8s.io/cluster-api/bootstrap/kubeadm/internal/cloudinit"
 )
 
@@ -19,7 +20,7 @@ runcmd: "WorkerJoin"
 
 // NewNode creates a toml formatted userdata including bootstrap host container settings that has
 // a base64 encoded user data for the bootstrap container
-func NewNode(input *cloudinit.NodeInput) ([]byte, error) {
+func NewNode(input *cloudinit.NodeInput, config *BottlerocketConfig) ([]byte, error) {
 	input.KubeadmCommand = fmt.Sprintf(standardJoinCommand, input.KubeadmVerbosity)
 	input.WriteFiles = append(input.WriteFiles, input.AdditionalFiles...)
 	bootstrapContainerUserData, err := generateBootstrapContainerUserData("Node", nodeBottleRocketInit, input)
@@ -27,5 +28,5 @@ func NewNode(input *cloudinit.NodeInput) ([]byte, error) {
 		return nil, err
 	}
 
-	return getBottlerocketNodeUserData(bootstrapContainerUserData, input.Users)
+	return getBottlerocketNodeUserData(bootstrapContainerUserData, input.Users, config)
 }

@@ -15,13 +15,14 @@ cluster-domain = "cluster.local"
 standalone-mode = true
 authentication-mode = "tls"
 server-tls-bootstrap = false
+pod-infra-container-image = "{{.PauseContainerSource}}"
 {{- end -}}
 `
 	bootstrapHostContainerTemplate = `{{define "bootstrapHostContainerSettings" -}}
 [settings.host-containers.kubeadm-bootstrap]
 enabled = true
 superpowered = true
-source = "public.ecr.aws/w4k1d8o8/kubeadm-bootstrap:latest"
+source = "{{.BootstrapContainerSource}}"
 user-data = "{{.BootstrapContainerUserData}}"
 {{- end -}}
 `
@@ -29,6 +30,6 @@ user-data = "{{.BootstrapContainerUserData}}"
 
 {{template "adminContainerInitSettings" .}}
 
-{{template "kubernetesInitSettings" }}
+{{template "kubernetesInitSettings" .}}
 `
 )

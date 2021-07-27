@@ -419,6 +419,8 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 	r.reconcileTopLevelObjectSettings(ctx, scope.Cluster, machine, scope.Config)
 
 	// Add extra config to cluster config for bottlerocket
+	// Extract bottlerocket config from kubeadm
+	var bottlerocketConfig *bottlerocket.BottlerocketConfig
 	if scope.Config.Spec.Format == bootstrapv1.Bottlerocket {
 		// Add certificates dir
 		if scope.Config.Spec.ClusterConfiguration.CertificatesDir == "" {
@@ -445,6 +447,11 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 				ReadOnly:  true,
 				PathType:  "File",
 			},
+		}
+
+		bottlerocketConfig = &bottlerocket.BottlerocketConfig{
+			Pause:                 scope.Config.Spec.ClusterConfiguration.Pause,
+			BottlerocketBootstrap: scope.Config.Spec.ClusterConfiguration.BottlerocketBootstrap,
 		}
 	}
 
@@ -502,7 +509,7 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 			Ignition:          scope.Config.Spec.Ignition,
 		})
 	case bootstrapv1.Bottlerocket:
-		bootstrapInitData, err = bottlerocket.NewInitControlPlane(controlPlaneInput)
+		bootstrapInitData, err = bottlerocket.NewInitControlPlane(controlPlaneInput, bottlerocketConfig)
 		if err != nil {
 			scope.Error(err, "Failed to generate cloud init for bottlerocket bootstrap control plane")
 			return ctrl.Result{}, err
@@ -600,7 +607,11 @@ func (r *KubeadmConfigReconciler) joinWorker(ctx context.Context, scope *Scope) 
 			Ignition:  scope.Config.Spec.Ignition,
 		})
 	case bootstrapv1.Bottlerocket:
-		bootstrapJoinData, err = bottlerocket.NewNode(nodeInput)
+		bottlerocketConfig := &bottlerocket.BottlerocketConfig{
+			Pause:                 scope.Config.Spec.JoinConfiguration.Pause,
+			BottlerocketBootstrap: scope.Config.Spec.JoinConfiguration.BottlerocketBootstrap,
+		}
+		bootstrapJoinData, err = bottlerocket.NewNode(nodeInput, bottlerocketConfig)
 		if err != nil {
 			scope.Error(err, "Failed to create a worker bottlerocket join configuration")
 			return ctrl.Result{}, err
@@ -702,7 +713,11 @@ func (r *KubeadmConfigReconciler) joinControlplane(ctx context.Context, scope *S
 			Ignition:              scope.Config.Spec.Ignition,
 		})
 	case bootstrapv1.Bottlerocket:
-		bootstrapJoinData, err = bottlerocket.NewJoinControlPlane(controlPlaneJoinInput)
+		bottlerocketConfig := &bottlerocket.BottlerocketConfig{
+			Pause:                 scope.Config.Spec.JoinConfiguration.Pause,
+			BottlerocketBootstrap: scope.Config.Spec.JoinConfiguration.BottlerocketBootstrap,
+		}
+		bootstrapJoinData, err = bottlerocket.NewJoinControlPlane(controlPlaneJoinInput, bottlerocketConfig)
 		if err != nil {
 			scope.Error(err, "Failed to generate cloud init for bottlerocket bootstrap control plane")
 			return ctrl.Result{}, err

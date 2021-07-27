@@ -30,7 +30,7 @@ runcmd: "ControlPlaneInit"
 // NewInitControlPlane will take the cloudinit's controlplane input as an argument
 // and generate the bottlerocket toml formatted userdata for the host node, which
 // has the settings for bootstrap container which has its own embedded base64 encoded userdata.
-func NewInitControlPlane(input *cloudinit.ControlPlaneInput) ([]byte, error) {
+func NewInitControlPlane(input *cloudinit.ControlPlaneInput, config *BottlerocketConfig) ([]byte, error) {
 	input.Header = cloudConfigHeader
 	input.WriteFiles = input.Certificates.AsFiles()
 	input.WriteFiles = append(input.WriteFiles, input.AdditionalFiles...)
@@ -46,5 +46,5 @@ func NewInitControlPlane(input *cloudinit.ControlPlaneInput) ([]byte, error) {
 	}
 	fmt.Println(string(bootstrapContainerUserData))
 
-	return getBottlerocketNodeUserData(bootstrapContainerUserData, input.Users)
+	return getBottlerocketNodeUserData(bootstrapContainerUserData, input.Users, config)
 }

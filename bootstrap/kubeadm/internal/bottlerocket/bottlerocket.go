@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1alpha3"
+	kubeadmv1beta1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/types/v1beta1"
 
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -20,9 +21,16 @@ const (
 `
 )
 
+type BottlerocketConfig struct {
+	Pause                 kubeadmv1beta1.Pause
+	BottlerocketBootstrap kubeadmv1beta1.BottlerocketBootstrap
+}
+
 type BottlerocketSettingsInput struct {
 	BootstrapContainerUserData string
 	AdminContainerUserData     string
+	BootstrapContainerSource   string
+	PauseContainerSource       string
 }
 
 type HostPath struct {
@@ -90,7 +98,7 @@ func generateNodeUserData(kind string, tpl string, data interface{}) ([]byte, er
 }
 
 // getBottlerocketNodeUserData returns the userdata for the host bottlerocket in toml format
-func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []bootstrapv1.User) ([]byte, error) {
+func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []bootstrapv1.User, config *BottlerocketConfig) ([]byte, error) {
 	// base64 encode the bootstrapContainer's user data
 	b64BootstrapContainerUserData := base64.StdEncoding.EncodeToString(bootstrapContainerUserData)
 
@@ -107,6 +115,8 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 	bottlerocketInput := &BottlerocketSettingsInput{
 		BootstrapContainerUserData: b64BootstrapContainerUserData,
 		AdminContainerUserData:     b64AdminContainerUserData,
+		BootstrapContainerSource:   fmt.Sprintf("%s:%s", config.BottlerocketBootstrap.ImageRepository, config.BottlerocketBootstrap.ImageTag),
+		PauseContainerSource:       fmt.Sprintf("%s:%s", config.Pause.ImageRepository, config.Pause.ImageTag),
 	}
 
 	bottlerocketNodeUserData, err := generateNodeUserData("InitBottlerocketNode", bottlerocketNodeInitSettingsTemplate, bottlerocketInput)

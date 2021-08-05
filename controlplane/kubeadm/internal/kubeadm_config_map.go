@@ -192,6 +192,43 @@ func (k *kubeadmConfig) UpdateEtcdMeta(imageRepository, imageTag string) (bool, 
 	return changed, nil
 }
 
+func (k *kubeadmConfig) UpdateExternalEtcdEndpoints(endpoints []string) (bool, error) {
+	data, ok := k.ConfigMap.Data[clusterConfigurationKey]
+	if !ok {
+		return false, errors.Errorf("unable to find %q in kubeadm ConfigMap", clusterConfigurationKey)
+	}
+	configuration, err := yamlToUnstructured([]byte(data))
+	if err != nil {
+		return false, errors.Wrapf(err, "unable to decode kubeadm ConfigMap's %q to Unstructured object", clusterConfigurationKey)
+	}
+
+	var changed bool
+
+	externalEtcdEndpointsPath := []string{"etcd", "external", "endpoints"}
+	currentEtcdEndpoints, _, err := unstructured.NestedStringSlice(configuration.UnstructuredContent(), externalEtcdEndpointsPath...)
+	if err != nil {
+		return false, errors.Wrapf(err, "unable to retrieve %q from kubeadm ConfigMap", strings.Join(externalEtcdEndpointsPath, "."))
+	}
+	if !reflect.DeepEqual(currentEtcdEndpoints, endpoints) {
+		if err := unstructured.SetNestedStringSlice(configuration.UnstructuredContent(), endpoints, externalEtcdEndpointsPath...); err != nil {
+			return false, errors.Wrapf(err, "unable to update %q on kubeadm ConfigMap", strings.Join(externalEtcdEndpointsPath, "."))
+		}
+		changed = true
+	}
+
+	// Return early if no changes have been performed.
+	if !changed {
+		return changed, nil
+	}
+
+	updated, err := yaml.Marshal(configuration)
+	if err != nil {
+		return false, errors.Wrapf(err, "unable to encode kubeadm ConfigMap's %q to YAML", clusterConfigurationKey)
+	}
+	k.ConfigMap.Data[clusterConfigurationKey] = string(updated)
+	return changed, nil
+}
+
 // UpdateCoreDNSImageInfo changes the dns.ImageTag and dns.ImageRepository
 // found in the kubeadm config map
 func (k *kubeadmConfig) UpdateCoreDNSImageInfo(repository, tag string) error {

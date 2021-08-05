@@ -101,6 +101,23 @@ func (w *Workload) UpdateEtcdVersionInKubeadmConfigMap(ctx context.Context, imag
 	return nil
 }
 
+func (w *Workload) UpdateExternalEtcdEndpointsInKubeadmConfigMap(ctx context.Context, endpoints []string) error {
+	configMapKey := ctrlclient.ObjectKey{Name: kubeadmConfigKey, Namespace: metav1.NamespaceSystem}
+	kubeadmConfigMap, err := w.getConfigMap(ctx, configMapKey)
+	if err != nil {
+		return err
+	}
+	config := &kubeadmConfig{ConfigMap: kubeadmConfigMap}
+	changed, err := config.UpdateExternalEtcdEndpoints(endpoints)
+	if err != nil || !changed {
+		return err
+	}
+	if err := w.Client.Update(ctx, config.ConfigMap); err != nil {
+		return errors.Wrap(err, "error updating kubeadm ConfigMap")
+	}
+	return nil
+}
+
 // RemoveEtcdMemberForMachine removes the etcd member from the target cluster's etcd cluster.
 // Removing the last remaining member of the cluster is not supported.
 func (w *Workload) RemoveEtcdMemberForMachine(ctx context.Context, machine *clusterv1.Machine) error {

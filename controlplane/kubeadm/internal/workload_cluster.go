@@ -75,6 +75,7 @@ type WorkloadCluster interface {
 	UpdateKubernetesVersionInKubeadmConfigMap(ctx context.Context, version semver.Version) error
 	UpdateImageRepositoryInKubeadmConfigMap(ctx context.Context, imageRepository string) error
 	UpdateEtcdVersionInKubeadmConfigMap(ctx context.Context, imageRepository, imageTag string) error
+	UpdateExternalEtcdEndpointsInKubeadmConfigMap(ctx context.Context, endpoints []string) error
 	UpdateAPIServerInKubeadmConfigMap(ctx context.Context, apiServer kubeadmv1.APIServer) error
 	UpdateControllerManagerInKubeadmConfigMap(ctx context.Context, controllerManager kubeadmv1.ControlPlaneComponent) error
 	UpdateSchedulerInKubeadmConfigMap(ctx context.Context, scheduler kubeadmv1.ControlPlaneComponent) error

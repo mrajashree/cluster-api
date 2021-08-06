@@ -193,6 +193,27 @@ func (r *DockerMachineReconciler) reconcileNormal(ctx context.Context, cluster *
 		// This is required after move, because status is not moved to the target cluster.
 		dockerMachine.Status.Ready = true
 		conditions.MarkTrue(dockerMachine, infrav1.ContainerProvisionedCondition)
+		// set address in machine status
+		machineAddress, err := externalMachine.Address(ctx)
+		if err != nil {
+			r.Log.Error(err, "failed to get the machine address")
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		}
+
+		dockerMachine.Status.Addresses = []clusterv1.MachineAddress{
+			{
+				Type:    clusterv1.MachineHostName,
+				Address: externalMachine.ContainerName(),
+			},
+			{
+				Type:    clusterv1.MachineInternalIP,
+				Address: machineAddress,
+			},
+			{
+				Type:    clusterv1.MachineExternalIP,
+				Address: machineAddress,
+			},
+		}
 		return ctrl.Result{}, nil
 	}
 

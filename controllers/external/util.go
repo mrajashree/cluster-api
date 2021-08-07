@@ -263,6 +263,6 @@ func SetKCPUpdateCompleteAnnotationOnEtcdadmCluster(externalEtcd *unstructured.U
 	if !hasAnnotations {
 		annotations = make(map[string]string)
 	}
-	annotations[clusterv1.ControlPlaneUpgradeCompletedLabel] = "true"
+	annotations[clusterv1.ControlPlaneUpgradeCompletedAnnotation] = "true"
 	return unstructured.SetNestedStringMap(externalEtcd.UnstructuredContent(), annotations, "metadata", "annotations")
 }

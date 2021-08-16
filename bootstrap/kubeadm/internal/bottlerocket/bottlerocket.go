@@ -24,6 +24,7 @@ const (
 type BottlerocketConfig struct {
 	Pause                 kubeadmv1beta1.Pause
 	BottlerocketBootstrap kubeadmv1beta1.BottlerocketBootstrap
+	ProxyConfiguration    kubeadmv1beta1.ProxyConfiguration
 }
 
 type BottlerocketSettingsInput struct {
@@ -31,6 +32,8 @@ type BottlerocketSettingsInput struct {
 	AdminContainerUserData     string
 	BootstrapContainerSource   string
 	PauseContainerSource       string
+	HTTPSProxyEndpoint         string
+	NoProxyEndpoints           []string
 }
 
 type HostPath struct {
@@ -84,6 +87,9 @@ func generateNodeUserData(kind string, tpl string, data interface{}) ([]byte, er
 	if _, err := tm.Parse(kubernetesInitTemplate); err != nil {
 		return nil, errors.Wrapf(err, "failed to parse kubernetes %s template", kind)
 	}
+	if _, err := tm.Parse(networkInitTemplate); err != nil {
+		return nil, errors.Wrapf(err, "failed to parse networks %s template", kind)
+	}
 
 	t, err := tm.Parse(tpl)
 	if err != nil {
@@ -117,6 +123,8 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 		AdminContainerUserData:     b64AdminContainerUserData,
 		BootstrapContainerSource:   fmt.Sprintf("%s:%s", config.BottlerocketBootstrap.ImageRepository, config.BottlerocketBootstrap.ImageTag),
 		PauseContainerSource:       fmt.Sprintf("%s:%s", config.Pause.ImageRepository, config.Pause.ImageTag),
+		HTTPSProxyEndpoint:         config.ProxyConfiguration.HTTPSProxy,
+		NoProxyEndpoints:           config.ProxyConfiguration.NoProxy,
 	}
 
 	bottlerocketNodeUserData, err := generateNodeUserData("InitBottlerocketNode", bottlerocketNodeInitSettingsTemplate, bottlerocketInput)

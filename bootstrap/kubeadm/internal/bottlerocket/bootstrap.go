@@ -38,6 +38,8 @@ no-proxy = "{{.NoProxyEndpoints}}"
 
 {{template "kubernetesInitSettings" .}}
 
+{{- if (ne .HTTPSProxyEndpoint "")}}
 {{template "networkInitSettings" .}}
+{{- end -}}
 `
 )

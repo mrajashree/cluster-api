@@ -364,6 +364,25 @@ func (r *KubeadmControlPlaneReconciler) reconcile(ctx context.Context, cluster *
 		// NOTE: we are checking the condition already exists in order to avoid to set this condition at the first
 		// reconciliation/before a rolling upgrade actually starts.
 		if conditions.Has(controlPlane.KCP, controlplanev1.MachinesSpecUpToDateCondition) {
+			if conditions.IsFalse(controlPlane.KCP, controlplanev1.MachinesSpecUpToDateCondition) {
+				/* Once KCP upgrade has completed, the controller will annotate the external etcd object to indicate that the older KCP machines
+				are no longer part of the cluster, and so any older out-of-date etcd members and machines can be deleted
+				*/
+				if cluster.Spec.ManagedExternalEtcdRef != nil {
+					etcdRef := cluster.Spec.ManagedExternalEtcdRef
+					externalEtcd, err := external.Get(ctx, r.Client, etcdRef, cluster.Namespace)
+					if err != nil {
+						return ctrl.Result{}, err
+					}
+					log.Info("Adding upgrade complete annotation on etcdadmCluster")
+					if err := external.SetKCPUpdateCompleteAnnotationOnEtcdadmCluster(externalEtcd); err != nil {
+						return ctrl.Result{}, err
+					}
+					if err := r.Client.Update(ctx, externalEtcd); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			}
 			conditions.MarkTrue(controlPlane.KCP, controlplanev1.MachinesSpecUpToDateCondition)
 		}
 	}

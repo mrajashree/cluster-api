@@ -130,7 +130,6 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(string(bottlerocketNodeUserData))
 	return bottlerocketNodeUserData, nil
 }
 

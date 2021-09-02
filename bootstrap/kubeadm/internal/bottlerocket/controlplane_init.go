@@ -44,7 +44,6 @@ func NewInitControlPlane(input *cloudinit.ControlPlaneInput, config *Bottlerocke
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(string(bootstrapContainerUserData))
 
 	return getBottlerocketNodeUserData(bootstrapContainerUserData, input.Users, config)
 }

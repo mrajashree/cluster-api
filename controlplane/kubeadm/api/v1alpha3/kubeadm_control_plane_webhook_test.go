@@ -503,6 +503,18 @@ func TestKubeadmControlPlaneValidateUpdate(t *testing.T) {
 	disallowedUpgrade119Version := before.DeepCopy()
 	disallowedUpgrade119Version.Spec.Version = "v1.19.0"
 
+	validUpdateClusterConfPauseImage := before.DeepCopy()
+	validUpdateClusterConfPauseImage.Spec.KubeadmConfigSpec.ClusterConfiguration.Pause = kubeadmv1beta1.Pause{ImageMeta: kubeadmv1beta1.ImageMeta{ImageTag: "v1.1.0+new"}}
+
+	validUpdateClusterConfBRBootstrapImage := before.DeepCopy()
+	validUpdateClusterConfBRBootstrapImage.Spec.KubeadmConfigSpec.ClusterConfiguration.BottlerocketBootstrap = kubeadmv1beta1.BottlerocketBootstrap{ImageMeta: kubeadmv1beta1.ImageMeta{ImageTag: "v1.1.0+new"}}
+
+	validUpdateJoinConfPauseImage := before.DeepCopy()
+	validUpdateJoinConfPauseImage.Spec.KubeadmConfigSpec.JoinConfiguration.Pause = kubeadmv1beta1.Pause{ImageMeta: kubeadmv1beta1.ImageMeta{ImageTag: "v1.1.0+new"}}
+
+	validUpdateJoinConfBRBootstrapImage := before.DeepCopy()
+	validUpdateJoinConfBRBootstrapImage.Spec.KubeadmConfigSpec.JoinConfiguration.BottlerocketBootstrap = kubeadmv1beta1.BottlerocketBootstrap{ImageMeta: kubeadmv1beta1.ImageMeta{ImageTag: "v1.1.0+new"}}
+
 	tests := []struct {
 		name      string
 		expectErr bool
@@ -778,6 +790,30 @@ func TestKubeadmControlPlaneValidateUpdate(t *testing.T) {
 			expectErr: true,
 			before:    before,
 			kcp:       wrongReplicaCountForScaleIn,
+		},
+		{
+			name:      "should allow changes to cluster configuration pause image",
+			expectErr: false,
+			before:    before,
+			kcp:       validUpdateClusterConfPauseImage,
+		},
+		{
+			name:      "should allow changes to cluster configuration bottlerocket bootstrap image",
+			expectErr: false,
+			before:    before,
+			kcp:       validUpdateClusterConfBRBootstrapImage,
+		},
+		{
+			name:      "should allow changes to join configuration pause image",
+			expectErr: false,
+			before:    before,
+			kcp:       validUpdateJoinConfPauseImage,
+		},
+		{
+			name:      "should allow changes to join configuration bottlerocket bootstrap image",
+			expectErr: false,
+			before:    before,
+			kcp:       validUpdateJoinConfBRBootstrapImage,
 		},
 	}
 

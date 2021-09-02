@@ -26,10 +26,20 @@ source = "{{.BootstrapContainerSource}}"
 user-data = "{{.BootstrapContainerUserData}}"
 {{- end -}}
 `
+	networkInitTemplate = `{{ define "networkInitSettings" -}}
+[settings.network]
+https-proxy = "{{.HTTPSProxyEndpoint}}"
+no-proxy = "{{.NoProxyEndpoints}}"
+{{- end -}}
+`
 	bottlerocketNodeInitSettingsTemplate = `{{template "bootstrapHostContainerSettings" .}}
 
 {{template "adminContainerInitSettings" .}}
 
 {{template "kubernetesInitSettings" .}}
+
+{{- if (ne .HTTPSProxyEndpoint "")}}
+{{template "networkInitSettings" .}}
+{{- end -}}
 `
 )

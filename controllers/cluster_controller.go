@@ -89,10 +89,8 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager, options controlle
 	}
 
 	err = controller.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
-		&handler.EnqueueRequestsFromMapFunc{
-			ToRequests: handler.ToRequestsFunc(r.etcdMachineToCluster),
-		})
+		&source.Kind{Type: &clusterv1.Machine{}},
+		&handler.EnqueueRequestsFromMapFunc{ToRequests: handler.ToRequestsFunc(r.etcdMachineToCluster)})
 
 	if err != nil {
 		return errors.Wrap(err, "failed adding Watch for Clusters on etcd machines to controller manager")
@@ -598,6 +596,10 @@ func (r *ClusterReconciler) etcdMachineToCluster(o handler.MapObject) []ctrl.Req
 	if !util.IsEtcdMachine(m) {
 		return nil
 	}
+	// address has not been set, so ManagedExternalEtcdInitialized would not be true
+	if len(m.Status.Addresses) == 0 {
+		return nil
+	}
 
 	cluster, err := util.GetClusterByName(context.TODO(), r.Client, m.Namespace, m.Spec.ClusterName)
 	if err != nil {
@@ -606,6 +608,7 @@ func (r *ClusterReconciler) etcdMachineToCluster(o handler.MapObject) []ctrl.Req
 	}
 
 	if cluster.Status.ManagedExternalEtcdInitialized {
+		// no need to enqueue cluster for reconcile based on machine changes
 		return nil
 	}
 

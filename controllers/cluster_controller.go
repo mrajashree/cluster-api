@@ -585,6 +585,10 @@ func (r *ClusterReconciler) etcdMachineToCluster(o client.Object) []ctrl.Request
 	if !util.IsEtcdMachine(m) {
 		return nil
 	}
+	// address has not been set, so ManagedExternalEtcdInitialized would not be true
+	if len(m.Status.Addresses) == 0 {
+		return nil
+	}
 
 	cluster, err := util.GetClusterByName(context.TODO(), r.Client, m.Namespace, m.Spec.ClusterName)
 	if err != nil {
@@ -592,6 +596,7 @@ func (r *ClusterReconciler) etcdMachineToCluster(o client.Object) []ctrl.Request
 	}
 
 	if cluster.Status.ManagedExternalEtcdInitialized {
+		// no need to enqueue cluster for reconcile based on machine changes
 		return nil
 	}
 

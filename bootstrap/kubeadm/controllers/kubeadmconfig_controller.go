@@ -441,6 +441,9 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 		if scope.Config.Spec.ClusterConfiguration.Proxy.HTTPSProxy != "" {
 			bottlerocketConfig.ProxyConfiguration = scope.Config.Spec.ClusterConfiguration.Proxy
 		}
+		if scope.Config.Spec.ClusterConfiguration.RegistryMirror.Endpoint != "" {
+			bottlerocketConfig.RegistryMirrorConfiguration = scope.Config.Spec.ClusterConfiguration.RegistryMirror
+		}
 	}
 
 	clusterdata, err := kubeadmtypes.MarshalClusterConfigurationForVersion(scope.Config.Spec.ClusterConfiguration, parsedVersion)
@@ -589,6 +592,9 @@ func (r *KubeadmConfigReconciler) joinWorker(ctx context.Context, scope *Scope) 
 		if scope.Config.Spec.JoinConfiguration.Proxy.HTTPSProxy != "" {
 			bottlerocketConfig.ProxyConfiguration = scope.Config.Spec.JoinConfiguration.Proxy
 		}
+		if scope.Config.Spec.JoinConfiguration.RegistryMirror.Endpoint != "" {
+			bottlerocketConfig.RegistryMirrorConfiguration = scope.Config.Spec.JoinConfiguration.RegistryMirror
+		}
 		cloudJoinData, err = bottlerocket.NewNode(cloudJoinInput, bottlerocketConfig)
 		if err != nil {
 			scope.Error(err, "Failed to create a worker bottlerocket join configuration")
@@ -690,6 +696,9 @@ func (r *KubeadmConfigReconciler) joinControlplane(ctx context.Context, scope *S
 		}
 		if scope.Config.Spec.JoinConfiguration.Proxy.HTTPSProxy != "" {
 			bottlerocketConfig.ProxyConfiguration = scope.Config.Spec.JoinConfiguration.Proxy
+		}
+		if scope.Config.Spec.ClusterConfiguration.RegistryMirror.Endpoint != "" {
+			bottlerocketConfig.RegistryMirrorConfiguration = scope.Config.Spec.ClusterConfiguration.RegistryMirror
 		}
 		cloudJoinData, err = bottlerocket.NewJoinControlPlane(cloudJoinInput, bottlerocketConfig)
 		if err != nil {

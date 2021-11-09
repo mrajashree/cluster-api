@@ -162,14 +162,13 @@ func (v buildIdentifier) compare(o buildIdentifier) int {
 			return 1
 		}
 	} else { // both are strings
-		switch {
-		case v.IdentifierStr < o.IdentifierStr:
-			return -1
-		case v.IdentifierStr == o.IdentifierStr:
+		// In order to support random build indentifiers, like commit hashes,
+		// always return -1 when the strings are different to always signal
+		// there is version change
+		if v.IdentifierStr == o.IdentifierStr {
 			return 0
-		default:
-			return 1
 		}
+		return -1
 	}
 }
 

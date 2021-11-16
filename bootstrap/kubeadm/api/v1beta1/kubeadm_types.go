@@ -70,6 +70,12 @@ type ClusterConfiguration struct {
 	// This is only for bottlerocket
 	// +optional
 	BottlerocketBootstrap BottlerocketBootstrap `json:"bottlerocketBootstrap,omitempty"`
+
+	// Proxy holds the https and no proxy information
+	// This is only for bottlerocket
+	// +optional
+	Proxy ProxyConfiguration `json:"proxy,omitempty"`
+
 	// Etcd holds configuration for etcd.
 	// NB: This value defaults to a Local (stacked) etcd
 	// +optional
@@ -149,6 +155,15 @@ type Pause struct {
 type BottlerocketBootstrap struct {
 	// ImageMeta allows to customize the image used for the BottlerocketBootstrap component
 	ImageMeta `json:",inline"`
+}
+
+// ProxyConfiguration holds the settings for proxying bottlerocket services
+type ProxyConfiguration struct {
+	// HTTPS proxy
+	HTTPSProxy string `json:"httpsProxy,omitempty"`
+
+	// No proxy, list of ips that should not use proxy
+	NoProxy []string `json:"noProxy,omitempty"`
 }
 
 // ControlPlaneComponent holds settings common to control plane component of the cluster.
@@ -370,6 +385,11 @@ type JoinConfiguration struct {
 	// This is only for bottlerocket
 	// +optional
 	BottlerocketBootstrap BottlerocketBootstrap `json:"bottlerocketBootstrap,omitempty"`
+
+	// Proxy holds the https and no proxy information
+	// This is only for bottlerocket
+	// +optional
+	Proxy ProxyConfiguration `json:"proxy,omitempty"`
 
 	// NodeRegistration holds fields that relate to registering the new control-plane node to the cluster.
 	// When used in the context of control plane nodes, NodeRegistration should remain consistent

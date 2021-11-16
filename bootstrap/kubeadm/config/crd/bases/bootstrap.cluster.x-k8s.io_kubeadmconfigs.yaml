@@ -2375,6 +2375,19 @@ spec:
                           the version of the above components during upgrades.
                         type: string
                     type: object
+                  proxy:
+                    description: Proxy holds the https and no proxy information This
+                      is only for bottlerocket
+                    properties:
+                      httpsProxy:
+                        description: HTTPS proxy
+                        type: string
+                      noProxy:
+                        description: No proxy, list of ips that should not use proxy
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   scheduler:
                     description: Scheduler contains extra settings for the scheduler
                       control plane component
@@ -2929,6 +2942,19 @@ spec:
                           In case this value is set, kubeadm does not change automatically
                           the version of the above components during upgrades.
                         type: string
+                    type: object
+                  proxy:
+                    description: Proxy holds the https and no proxy information This
+                      is only for bottlerocket
+                    properties:
+                      httpsProxy:
+                        description: HTTPS proxy
+                        type: string
+                      noProxy:
+                        description: No proxy, list of ips that should not use proxy
+                        items:
+                          type: string
+                        type: array
                     type: object
                 type: object
               mounts:

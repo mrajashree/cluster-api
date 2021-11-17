@@ -99,6 +99,9 @@ const (
 	// An external controller must fulfill the contract of the InfraCluster resource.
 	// External infrastructure providers should ensure that the annotation, once set, cannot be removed.
 	ManagedByAnnotation = "cluster.x-k8s.io/managed-by"
+
+	// ControlPlaneUpgradeCompletedAnnotation is set by the controlplane on the external etcd object after controlplane upgrade is completed
+	ControlPlaneUpgradeCompletedAnnotation = "controlplane.cluster.x-k8s.io/upgrade-complete"
 )
 
 const (

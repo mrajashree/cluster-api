@@ -196,7 +196,7 @@ func (r *DockerMachineReconciler) reconcileNormal(ctx context.Context, cluster *
 		// set address in machine status
 		machineAddress, err := externalMachine.Address(ctx)
 		if err != nil {
-			r.Log.Error(err, "failed to get the machine address")
+			log.Error(err, "failed to get the machine address")
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 
@@ -337,7 +337,7 @@ func (r *DockerMachineReconciler) reconcileNormal(ctx context.Context, cluster *
 			if errors.As(err, &docker.ContainerNotRunningError{}) {
 				return ctrl.Result{}, errors.Wrap(err, "failed to patch the Kubernetes node with the machine providerID")
 			}
-			r.Log.Error(err, "failed to patch the Kubernetes node with the machine providerID")
+			log.Error(err, "failed to patch the Kubernetes node with the machine providerID")
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 	}

@@ -29,14 +29,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - etcdcluster.cluster.x-k8s.io
-  resources:
-    - '*'
-  verbs:
-    - get
-    - list
-    - watch
-- apiGroups:
   - cluster.x-k8s.io
   resources:
   - clusters
@@ -78,4 +70,12 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - etcdcluster.cluster.x-k8s.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
   - watch

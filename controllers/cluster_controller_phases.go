@@ -200,7 +200,7 @@ func (r *ClusterReconciler) reconcileInfrastructure(ctx context.Context, cluster
 
 // reconcileControlPlane reconciles the Spec.ControlPlaneRef object on a Cluster.
 func (r *ClusterReconciler) reconcileControlPlane(ctx context.Context, cluster *clusterv1.Cluster) (ctrl.Result, error) {
-	log := r.Log.WithValues("cluster", cluster.Name, "namespace", cluster.Namespace)
+	log := ctrl.LoggerFrom(ctx)
 	if cluster.Spec.ControlPlaneRef == nil {
 		return ctrl.Result{}, nil
 	}
@@ -289,7 +289,7 @@ func (r *ClusterReconciler) reconcileControlPlane(ctx context.Context, cluster *
 }
 
 func (r *ClusterReconciler) reconcileEtcdCluster(ctx context.Context, cluster *clusterv1.Cluster) (ctrl.Result, error) {
-	log := r.Log.WithValues("cluster", cluster.Name, "namespace", cluster.Namespace)
+	log := ctrl.LoggerFrom(ctx)
 
 	if cluster.Spec.ManagedExternalEtcdRef == nil {
 		return ctrl.Result{}, nil

@@ -391,7 +391,7 @@ func (r *MachineReconciler) reconcileInfrastructure(ctx context.Context, cluster
 						return ctrl.Result{}, err
 					}
 				} else {
-					logger.Error(err, "error getting etcd init secret containing address")
+					log.Error(err, "error getting etcd init secret containing address")
 					return ctrl.Result{}, err
 				}
 			} else {

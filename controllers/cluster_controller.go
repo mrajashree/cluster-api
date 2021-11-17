@@ -58,7 +58,7 @@ const (
 // +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;patch
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io;bootstrap.cluster.x-k8s.io;controlplane.cluster.x-k8s.io,resources=*,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io;bootstrap.cluster.x-k8s.io;controlplane.cluster.x-k8s.io;etcdcluster.cluster.x-k8s.io,resources=*,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status;clusters/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch
 
@@ -88,9 +88,8 @@ func (r *ClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manag
 
 	err = controller.Watch(
 		&source.Kind{Type: &clusterv1.Cluster{}},
-		&handler.EnqueueRequestsFromMapFunc{
-			ToRequests: handler.ToRequestsFunc(r.etcdMachineToCluster),
-		})
+		handler.EnqueueRequestsFromMapFunc(r.etcdMachineToCluster),
+	)
 
 	if err != nil {
 		return errors.Wrap(err, "failed adding Watch for Clusters on etcd machines to controller manager")
@@ -326,7 +325,7 @@ func (r *ClusterReconciler) reconcileDelete(ctx context.Context, cluster *cluste
 			}
 
 			// Return here so we don't remove the finalizer yet.
-			logger.Info("Cluster still has descendants - need to requeue", "managedExternalEtcdRef", cluster.Spec.ManagedExternalEtcdRef.Name)
+			log.Info("Cluster still has descendants - need to requeue", "managedExternalEtcdRef", cluster.Spec.ManagedExternalEtcdRef.Name)
 			return ctrl.Result{}, nil
 		}
 	}
@@ -463,7 +462,8 @@ func (r *ClusterReconciler) listDescendants(ctx context.Context, cluster *cluste
 	// Split machines into control plane and worker machines so we make sure we delete control plane machines last
 	machineCollection := collections.FromMachineList(&machines)
 	controlPlaneMachines := machineCollection.Filter(collections.ControlPlaneMachines(cluster.Name))
-	workerMachines := machineCollection.Difference(controlPlaneMachines)
+	etcdMachines := machineCollection.Filter(collections.EtcdMachines(cluster.Name))
+	workerMachines := machineCollection.Difference(controlPlaneMachines).Difference(etcdMachines)
 	descendants.workerMachines = collections.ToMachineList(workerMachines)
 	// Only count control plane machines as descendants if there is no control plane provider.
 	if cluster.Spec.ControlPlaneRef == nil {
@@ -577,11 +577,10 @@ func (r *ClusterReconciler) controlPlaneMachineToCluster(o client.Object) []ctrl
 
 // etcdMachineToCluster is a handler.ToRequestsFunc to be used to enqueue requests for reconciliation
 // for Cluster to update its status.ManagedExternalEtcdInitialized field
-func (r *ClusterReconciler) etcdMachineToCluster(o handler.MapObject) []ctrl.Request {
-	m, ok := o.Object.(*clusterv1.Machine)
+func (r *ClusterReconciler) etcdMachineToCluster(o client.Object) []ctrl.Request {
+	m, ok := o.(*clusterv1.Machine)
 	if !ok {
-		r.Log.Error(nil, fmt.Sprintf("Expected a Machine but got a %T", o.Object))
-		return nil
+		panic(fmt.Sprintf("Expected a Machine but got a %T", o))
 	}
 	if !util.IsEtcdMachine(m) {
 		return nil
@@ -589,7 +588,6 @@ func (r *ClusterReconciler) etcdMachineToCluster(o handler.MapObject) []ctrl.Req
 
 	cluster, err := util.GetClusterByName(context.TODO(), r.Client, m.Namespace, m.Spec.ClusterName)
 	if err != nil {
-		r.Log.Error(err, "Failed to get cluster", "machine", m.Name, "cluster", m.ClusterName, "namespace", m.Namespace)
 		return nil
 	}
 

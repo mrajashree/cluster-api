@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
@@ -63,6 +62,7 @@ import (
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch
+// +kubebuilder:rbac:groups=etcdcluster.cluster.x-k8s.io,resources=*,verbs=get;list;watch
 
 // KubeadmControlPlaneReconciler reconciles a KubeadmControlPlane object.
 type KubeadmControlPlaneReconciler struct {
@@ -168,7 +168,7 @@ func (r *KubeadmControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.
 			return ctrl.Result{}, err
 		}
 		if !found {
-			logger.Info("Etcd endpoints not available")
+			log.Info("Etcd endpoints not available")
 			return ctrl.Result{Requeue: true}, nil
 		}
 		currentEtcdEndpoints := strings.Split(endpoints, ",")
@@ -177,7 +177,7 @@ func (r *KubeadmControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.
 		if !reflect.DeepEqual(currentEtcdEndpoints, currentKCPEndpoints) {
 			kcp.Spec.KubeadmConfigSpec.ClusterConfiguration.Etcd.External.Endpoints = currentEtcdEndpoints
 			if err := patchHelper.Patch(ctx, kcp); err != nil {
-				logger.Error(err, "Failed to patch KubeadmControlPlane to update external etcd endpoints")
+				log.Error(err, "Failed to patch KubeadmControlPlane to update external etcd endpoints")
 				return ctrl.Result{}, err
 			}
 		}

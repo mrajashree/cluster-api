@@ -575,10 +575,6 @@ func (b *machineBuilder) build() clusterv1.Machine {
 	return b.m
 }
 
-type machinePoolBuilder struct {
-	mp expv1.MachinePool
-}
-
 func newMachinePoolBuilder() *machinePoolBuilder {
 	return &machinePoolBuilder{}
 }

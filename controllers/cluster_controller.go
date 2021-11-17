@@ -87,7 +87,7 @@ func (r *ClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manag
 	}
 
 	err = controller.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
+		&source.Kind{Type: &clusterv1.Machine{}},
 		handler.EnqueueRequestsFromMapFunc(r.etcdMachineToCluster),
 	)
 

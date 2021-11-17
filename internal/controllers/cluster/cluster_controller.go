@@ -90,7 +90,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, opt
 	}
 
 	err = controller.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
+		&source.Kind{Type: &clusterv1.Machine{}},
 		handler.EnqueueRequestsFromMapFunc(r.etcdMachineToCluster),
 	)
 

@@ -58,7 +58,7 @@ const (
 // +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;patch
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io;bootstrap.cluster.x-k8s.io;controlplane.cluster.x-k8s.io,resources=*,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io;bootstrap.cluster.x-k8s.io;controlplane.cluster.x-k8s.io;etcdcluster.cluster.x-k8s.io,resources=*,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status;clusters/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch
 
@@ -423,9 +423,6 @@ func (c *clusterDescendants) descendantNames() string {
 	if len(workerMachineNames) > 0 {
 		descendants = append(descendants, "Worker machines: "+strings.Join(workerMachineNames, ","))
 	}
-	if cluster.Spec.ManagedExternalEtcdRef != nil {
-		lists = append(lists, &c.etcdMachines)
-	}
 	if feature.Gates.Enabled(feature.MachinePool) {
 		machinePoolNames := make([]string, len(c.machinePools.Items))
 		for i, machinePool := range c.machinePools.Items {
@@ -468,7 +465,8 @@ func (r *Reconciler) listDescendants(ctx context.Context, cluster *clusterv1.Clu
 	// Split machines into control plane and worker machines so we make sure we delete control plane machines last
 	machineCollection := collections.FromMachineList(&machines)
 	controlPlaneMachines := machineCollection.Filter(collections.ControlPlaneMachines(cluster.Name))
-	workerMachines := machineCollection.Difference(controlPlaneMachines)
+	etcdMachines := machineCollection.Filter(collections.EtcdMachines(cluster.Name))
+	workerMachines := machineCollection.Difference(controlPlaneMachines).Difference(etcdMachines)
 	descendants.workerMachines = collections.ToMachineList(workerMachines)
 	// Only count control plane machines as descendants if there is no control plane provider.
 	if cluster.Spec.ControlPlaneRef == nil {
@@ -501,6 +499,9 @@ func (c clusterDescendants) filterOwnedDescendants(cluster *clusterv1.Cluster) (
 		&c.machineSets,
 		&c.workerMachines,
 		&c.controlPlaneMachines,
+	}
+	if cluster.Spec.ManagedExternalEtcdRef != nil {
+		lists = append(lists, &c.etcdMachines)
 	}
 	if feature.Gates.Enabled(feature.MachinePool) {
 		lists = append([]client.ObjectList{&c.machinePools}, lists...)

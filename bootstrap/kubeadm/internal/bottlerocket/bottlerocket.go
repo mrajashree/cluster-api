@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1alpha3"
+	corev1 "k8s.io/api/core/v1"
 	kubeadmv1beta1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/types/v1beta1"
 
 	"github.com/pkg/errors"
@@ -27,6 +28,7 @@ type BottlerocketConfig struct {
 	BottlerocketBootstrap       kubeadmv1beta1.BottlerocketBootstrap
 	ProxyConfiguration          kubeadmv1beta1.ProxyConfiguration
 	RegistryMirrorConfiguration kubeadmv1beta1.RegistryMirrorConfiguration
+	Taints			    []corev1.Taint
 }
 
 type BottlerocketSettingsInput struct {

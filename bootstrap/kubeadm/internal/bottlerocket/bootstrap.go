@@ -16,6 +16,12 @@ standalone-mode = true
 authentication-mode = "tls"
 server-tls-bootstrap = false
 pod-infra-container-image = "{{.PauseContainerSource}}"
+[settings.kubernetes.node-taints]
+{{- if .Taints }}
+{{ range .Taints}}
+- {{ .Key }} = {{ .Value }}:{{ .Effect }}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 `
 	bootstrapHostContainerTemplate = `{{define "bootstrapHostContainerSettings" -}}

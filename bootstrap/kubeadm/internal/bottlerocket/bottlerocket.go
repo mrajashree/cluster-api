@@ -38,7 +38,7 @@ type BottlerocketSettingsInput struct {
 	NoProxyEndpoints           []string
 	RegistryMirrorEndpoint     string
 	RegistryMirrorCACert       string
-	NodeLabels                 map[string]string
+	NodeLabels                 string
 }
 
 type HostPath struct {
@@ -148,9 +148,8 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 		bottlerocketInput.RegistryMirrorCACert = base64.StdEncoding.EncodeToString([]byte(config.RegistryMirrorConfiguration.CACert))
 	}
 
-	if config.NodeRegistrationOptions.Labels != nil {
-		bottlerocketInput.NodeLabels = config.NodeRegistrationOptions.Labels
-
+	if _, ok := config.NodeRegistrationOptions.KubeletExtraArgs["node-labels"]; ok {
+		bottlerocketInput.NodeLabels = config.NodeRegistrationOptions.KubeletExtraArgs["node-labels"]
 	}
 
 	bottlerocketNodeUserData, err := generateNodeUserData("InitBottlerocketNode", bottlerocketNodeInitSettingsTemplate, bottlerocketInput)

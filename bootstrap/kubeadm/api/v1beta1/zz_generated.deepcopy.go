@@ -935,13 +935,6 @@ func (in *NodeRegistrationOptions) DeepCopyInto(out *NodeRegistrationOptions) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Labels != nil {
-		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.KubeletExtraArgs != nil {
 		in, out := &in.KubeletExtraArgs, &out.KubeletExtraArgs
 		*out = make(map[string]string, len(*in))

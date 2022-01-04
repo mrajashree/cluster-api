@@ -273,10 +273,6 @@ type NodeRegistrationOptions struct {
 	// +optional
 	Taints []corev1.Taint `json:"taints,omitempty"`
 
-	// Labels specifies the labels to attach to the node
-	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
-
 	// KubeletExtraArgs passes through extra arguments to the kubelet. The arguments here are passed to the kubelet command line via the environment file
 	// kubeadm writes at runtime for the kubelet to source. This overrides the generic base-level configuration in the kubelet-config-1.X ConfigMap
 	// Flags have higher priority when parsing. These values are local and specific to the node kubeadm is executing on.

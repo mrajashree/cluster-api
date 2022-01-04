@@ -444,9 +444,6 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 		if scope.Config.Spec.ClusterConfiguration.RegistryMirror.Endpoint != "" {
 			bottlerocketConfig.RegistryMirrorConfiguration = scope.Config.Spec.ClusterConfiguration.RegistryMirror
 		}
-		if scope.Config.Spec.InitConfiguration.NodeRegistration.Labels != nil {
-			bottlerocketConfig.NodeRegistrationOptions.Labels = scope.Config.Spec.InitConfiguration.NodeRegistration.Labels
-		}
 	}
 
 	clusterdata, err := kubeadmtypes.MarshalClusterConfigurationForVersion(scope.Config.Spec.ClusterConfiguration, parsedVersion)

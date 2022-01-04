@@ -757,6 +757,12 @@ spec:
                               values are local and specific to the node kubeadm is
                               executing on.
                             type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: Labels specifies the labels to attach to
+                              the node
+                            type: object
                           name:
                             description: Name is the `.Metadata.Name` field of the
                               Node API object that will be created in this `kubeadm
@@ -959,6 +965,12 @@ spec:
                               ConfigMap Flags have higher priority when parsing. These
                               values are local and specific to the node kubeadm is
                               executing on.
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: Labels specifies the labels to attach to
+                              the node
                             type: object
                           name:
                             description: Name is the `.Metadata.Name` field of the
@@ -3343,6 +3355,12 @@ spec:
                               values are local and specific to the node kubeadm is
                               executing on.
                             type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: Labels specifies the labels to attach to
+                              the node
+                            type: object
                           name:
                             description: Name is the `.Metadata.Name` field of the
                               Node API object that will be created in this `kubeadm
@@ -3547,6 +3565,12 @@ spec:
                               ConfigMap Flags have higher priority when parsing. These
                               values are local and specific to the node kubeadm is
                               executing on.
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: Labels specifies the labels to attach to
+                              the node
                             type: object
                           name:
                             description: Name is the `.Metadata.Name` field of the

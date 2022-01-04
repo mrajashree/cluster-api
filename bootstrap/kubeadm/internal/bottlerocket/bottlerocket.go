@@ -26,6 +26,7 @@ type BottlerocketConfig struct {
 	BottlerocketBootstrap       bootstrapv1.BottlerocketBootstrap
 	ProxyConfiguration          bootstrapv1.ProxyConfiguration
 	RegistryMirrorConfiguration bootstrapv1.RegistryMirrorConfiguration
+	NodeRegistrationOptions     bootstrapv1.NodeRegistrationOptions
 }
 
 type BottlerocketSettingsInput struct {
@@ -37,6 +38,7 @@ type BottlerocketSettingsInput struct {
 	NoProxyEndpoints           []string
 	RegistryMirrorEndpoint     string
 	RegistryMirrorCACert       string
+	NodeLabels                 map[string]string
 }
 
 type HostPath struct {
@@ -99,6 +101,9 @@ func generateNodeUserData(kind string, tpl string, data interface{}) ([]byte, er
 	if _, err := tm.Parse(registryMirrorCACertTemplate); err != nil {
 		return nil, errors.Wrapf(err, "failed to parse registry mirror ca cert %s template", kind)
 	}
+	if _, err := tm.Parse(nodeLabelsTemplate); err != nil {
+		return nil, errors.Wrapf(err, "failed to parse node labels %s template", kind)
+	}
 	t, err := tm.Parse(tpl)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse %s template", kind)
@@ -141,6 +146,11 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 	}
 	if config.RegistryMirrorConfiguration.CACert != "" {
 		bottlerocketInput.RegistryMirrorCACert = base64.StdEncoding.EncodeToString([]byte(config.RegistryMirrorConfiguration.CACert))
+	}
+
+	if config.NodeRegistrationOptions.Labels != nil {
+		bottlerocketInput.NodeLabels = config.NodeRegistrationOptions.Labels
+
 	}
 
 	bottlerocketNodeUserData, err := generateNodeUserData("InitBottlerocketNode", bottlerocketNodeInitSettingsTemplate, bottlerocketInput)

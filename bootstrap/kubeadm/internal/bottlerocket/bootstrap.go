@@ -45,7 +45,7 @@ trusted=true
 `
 	nodeLabelsTemplate = `{{ define "nodeLabelSettings" -}}
 [settings.kubernetes.node-labels]
-user-data = "{{.NodeLabels}}"
+{{.NodeLabels}}
 {{- end -}}
 `
 	bottlerocketNodeInitSettingsTemplate = `{{template "bootstrapHostContainerSettings" .}}

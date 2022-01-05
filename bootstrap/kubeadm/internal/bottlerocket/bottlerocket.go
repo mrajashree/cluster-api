@@ -27,7 +27,7 @@ type BottlerocketConfig struct {
 	BottlerocketBootstrap       kubeadmv1beta1.BottlerocketBootstrap
 	ProxyConfiguration          kubeadmv1beta1.ProxyConfiguration
 	RegistryMirrorConfiguration kubeadmv1beta1.RegistryMirrorConfiguration
-	NodeRegistrationOptions     kubeadmv1beta1.NodeRegistrationOptions
+	KubeletExtraArgs            map[string]string
 }
 
 type BottlerocketSettingsInput struct {
@@ -148,8 +148,8 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 	if config.RegistryMirrorConfiguration.CACert != "" {
 		bottlerocketInput.RegistryMirrorCACert = base64.StdEncoding.EncodeToString([]byte(config.RegistryMirrorConfiguration.CACert))
 	}
-	if _, ok := config.NodeRegistrationOptions.KubeletExtraArgs["node-labels"]; ok {
-		bottlerocketInput.NodeLabels = config.NodeRegistrationOptions.KubeletExtraArgs["node-labels"]
+	if _, ok := config.KubeletExtraArgs["node-labels"]; ok {
+		bottlerocketInput.NodeLabels = config.KubeletExtraArgs["node-labels"]
 	}
 
 	bottlerocketNodeUserData, err := generateNodeUserData("InitBottlerocketNode", bottlerocketNodeInitSettingsTemplate, bottlerocketInput)

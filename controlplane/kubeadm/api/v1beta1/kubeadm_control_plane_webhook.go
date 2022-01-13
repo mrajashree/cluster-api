@@ -99,6 +99,7 @@ func (in *KubeadmControlPlane) ValidateCreate() error {
 
 const (
 	spec                 = "spec"
+	status               = "status"
 	kubeadmConfigSpec    = "kubeadmConfigSpec"
 	clusterConfiguration = "clusterConfiguration"
 	initConfiguration    = "initConfiguration"
@@ -150,6 +151,7 @@ func (in *KubeadmControlPlane) ValidateUpdate(old runtime.Object) error {
 		{spec, "rolloutAfter"},
 		{spec, "nodeDrainTimeout"},
 		{spec, "rolloutStrategy", "*"},
+		{status, "version"},
 	}
 
 	allErrs := validateKubeadmControlPlaneSpec(in.Spec, in.Namespace, field.NewPath("spec"))

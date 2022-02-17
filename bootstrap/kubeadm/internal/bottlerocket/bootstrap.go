@@ -16,14 +16,17 @@ standalone-mode = true
 authentication-mode = "tls"
 server-tls-bootstrap = false
 pod-infra-container-image = "{{.PauseContainerSource}}"
+{{- end -}}
+`
+	taintsTemplate = `{{ define "taintsTemplate" - }}
 [settings.kubernetes.node-taints]
 {{- if .Taints }}
 {{ range .Taints}}
 - {{ .Key }} = {{ .Value }}:{{ .Effect }}
 {{- end -}}
 {{- end -}}
-{{- end -}}
 `
+
 	bootstrapHostContainerTemplate = `{{define "bootstrapHostContainerSettings" -}}
 [settings.host-containers.kubeadm-bootstrap]
 enabled = true
@@ -74,6 +77,10 @@ trusted=true
 
 {{- if (ne .NodeLabels "")}}
 {{template "nodeLabelSettings" .}}
+{{- end -}}
+
+{{- if (ne .Taints "")}}
+{{template "taintsTemplate" .}}
 {{- end -}}
 `
 )

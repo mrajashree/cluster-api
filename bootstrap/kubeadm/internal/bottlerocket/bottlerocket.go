@@ -41,6 +41,7 @@ type BottlerocketSettingsInput struct {
 	RegistryMirrorEndpoint     string
 	RegistryMirrorCACert       string
 	NodeLabels                 string
+	Taints                     string
 }
 
 type HostPath struct {
@@ -141,6 +142,7 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 		HTTPSProxyEndpoint:         config.ProxyConfiguration.HTTPSProxy,
 		RegistryMirrorEndpoint:     config.RegistryMirrorConfiguration.Endpoint,
 		NodeLabels:                 parseNodeLabels(config.KubeletExtraArgs["node-labels"]), // empty string if it does not exist
+		Taints:                     ,
 	}
 	if len(config.ProxyConfiguration.NoProxy) > 0 {
 		for _, noProxy := range config.ProxyConfiguration.NoProxy {
@@ -156,6 +158,17 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 		return nil, err
 	}
 	return bottlerocketNodeUserData, nil
+}
+
+func parseTaints(taints []corev1.Taint) string {
+	if len(taints) == 0 {
+		return ""
+	}
+	var taintsToml strings.Builder
+	for _, taint := range taints {
+		taintsToml.WriteString(fmt.Sprintf("\"%v\" = [\"%v\":\"%v\"]", taint.Key, taint.Value, taint.Effect))
+	}
+	return taintsToml.String()
 }
 
 func parseNodeLabels(nodeLabels string) string {

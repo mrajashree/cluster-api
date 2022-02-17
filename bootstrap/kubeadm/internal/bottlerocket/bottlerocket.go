@@ -28,7 +28,7 @@ type BottlerocketConfig struct {
 	ProxyConfiguration          bootstrapv1.ProxyConfiguration
 	RegistryMirrorConfiguration bootstrapv1.RegistryMirrorConfiguration
 	KubeletExtraArgs            map[string]string
-	Taints			            []corev1.Taint
+	Taints                      []corev1.Taint
 }
 
 type BottlerocketSettingsInput struct {
@@ -163,13 +163,31 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 	return bottlerocketNodeUserData, nil
 }
 
+// bottlerocket configuration accepts taints in the format
+// "key" = ["value:Effect", "value2:Effect2"]
 func parseTaints(taints []corev1.Taint) string {
 	if len(taints) == 0 {
 		return ""
 	}
-	var taintsToml strings.Builder
+	taintValueEffectTemplate := "\"%v:%v\""
+	taintsMap := make(map[string][]string)
 	for _, taint := range taints {
-		taintsToml.WriteString(fmt.Sprintf("\"%v\" = [\"%v:%v\"]", taint.Key, taint.Value, taint.Effect))
+		valueEffectString := fmt.Sprintf(taintValueEffectTemplate, taint.Value, taint.Effect)
+		taintsMap[taint.Key]= append(taintsMap[taint.Key], valueEffectString)
+	}
+
+	var taintsToml strings.Builder
+	for k, v := range taintsMap {
+		// write the taint key and opening bracket: '"key" = ['
+		taintKey := fmt.Sprintf("\"%v\" = [", k)
+		taintsToml.WriteString(taintKey)
+
+		// write the value:effect mappings: '"value1:Effect1", "value2:Effect2"'
+		taintValueEffectMappings := strings.Join(v, ",")
+		taintsToml.WriteString(taintValueEffectMappings)
+
+		// close the brackets and go to a new line
+		taintsToml.WriteString("]")
 		taintsToml.WriteString("\n")
 	}
 	return taintsToml.String()

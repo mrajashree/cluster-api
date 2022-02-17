@@ -20,10 +20,7 @@ pod-infra-container-image = "{{.PauseContainerSource}}"
 `
 	taintsTemplate = `{{ define "taintsTemplate" - }}
 [settings.kubernetes.node-taints]
-{{- if .Taints }}
-{{ range .Taints}}
-- {{ .Key }} = {{ .Value }}:{{ .Effect }}
-{{- end -}}
+{{.Taints}}
 {{- end -}}
 `
 

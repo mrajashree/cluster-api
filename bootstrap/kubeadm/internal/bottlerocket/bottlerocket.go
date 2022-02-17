@@ -142,7 +142,7 @@ func getBottlerocketNodeUserData(bootstrapContainerUserData []byte, users []boot
 		HTTPSProxyEndpoint:         config.ProxyConfiguration.HTTPSProxy,
 		RegistryMirrorEndpoint:     config.RegistryMirrorConfiguration.Endpoint,
 		NodeLabels:                 parseNodeLabels(config.KubeletExtraArgs["node-labels"]), // empty string if it does not exist
-		Taints:                     ,
+		Taints:                     parseTaints(config.Taints), //empty string if it does not exist
 	}
 	if len(config.ProxyConfiguration.NoProxy) > 0 {
 		for _, noProxy := range config.ProxyConfiguration.NoProxy {
@@ -167,6 +167,7 @@ func parseTaints(taints []corev1.Taint) string {
 	var taintsToml strings.Builder
 	for _, taint := range taints {
 		taintsToml.WriteString(fmt.Sprintf("\"%v\" = [\"%v\":\"%v\"]", taint.Key, taint.Value, taint.Effect))
+		taintsToml.WriteString("\n")
 	}
 	return taintsToml.String()
 }

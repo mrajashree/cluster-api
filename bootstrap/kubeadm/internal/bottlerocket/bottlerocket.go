@@ -107,6 +107,9 @@ func generateNodeUserData(kind string, tpl string, data interface{}) ([]byte, er
 	if _, err := tm.Parse(nodeLabelsTemplate); err != nil {
 		return nil, errors.Wrapf(err, "failed to parse node labels %s template", kind)
 	}
+	if _, err := tm.Parse(taintsTemplate); err != nil {
+		return nil, errors.Wrapf(err, "failed to parse taints %s template", kind)
+	}
 	t, err := tm.Parse(tpl)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse %s template", kind)
@@ -166,7 +169,7 @@ func parseTaints(taints []corev1.Taint) string {
 	}
 	var taintsToml strings.Builder
 	for _, taint := range taints {
-		taintsToml.WriteString(fmt.Sprintf("\"%v\" = [\"%v\":\"%v\"]", taint.Key, taint.Value, taint.Effect))
+		taintsToml.WriteString(fmt.Sprintf("\"%v\" = [\"%v:%v\"]", taint.Key, taint.Value, taint.Effect))
 		taintsToml.WriteString("\n")
 	}
 	return taintsToml.String()

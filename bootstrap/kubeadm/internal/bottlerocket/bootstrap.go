@@ -18,7 +18,6 @@ server-tls-bootstrap = false
 pod-infra-container-image = "{{.PauseContainerSource}}"
 {{- end -}}
 `
-
 	bootstrapHostContainerTemplate = `{{define "bootstrapHostContainerSettings" -}}
 [settings.host-containers.kubeadm-bootstrap]
 enabled = true
@@ -49,12 +48,6 @@ trusted=true
 {{.NodeLabels}}
 {{- end -}}
 `
-	taintsTemplate = `{{ define "taintsTemplate" -}}
-[settings.kubernetes.node-taints]
-{{.Taints}}
-{{- end -}}
-`
-
 	bottlerocketNodeInitSettingsTemplate = `{{template "bootstrapHostContainerSettings" .}}
 
 {{template "adminContainerInitSettings" .}}
@@ -75,10 +68,6 @@ trusted=true
 
 {{- if (ne .NodeLabels "")}}
 {{template "nodeLabelSettings" .}}
-{{- end -}}
-
-{{- if (ne .Taints "")}}
-{{template "taintsTemplate" .}}
 {{- end -}}
 `
 )

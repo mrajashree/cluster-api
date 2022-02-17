@@ -601,9 +601,6 @@ func (r *KubeadmConfigReconciler) joinWorker(ctx context.Context, scope *Scope) 
 		if scope.Config.Spec.JoinConfiguration.NodeRegistration.KubeletExtraArgs != nil {
 			bottlerocketConfig.KubeletExtraArgs = scope.Config.Spec.JoinConfiguration.NodeRegistration.KubeletExtraArgs
 		}
-		if len(scope.Config.Spec.JoinConfiguration.NodeRegistration.Taints) > 0 {
-			bottlerocketConfig.Taints = scope.Config.Spec.JoinConfiguration.NodeRegistration.Taints
-		}
 		cloudJoinData, err = bottlerocket.NewNode(cloudJoinInput, bottlerocketConfig)
 		if err != nil {
 			scope.Error(err, "Failed to create a worker bottlerocket join configuration")

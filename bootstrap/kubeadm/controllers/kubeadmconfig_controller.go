@@ -447,6 +447,9 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 		if scope.Config.Spec.InitConfiguration.NodeRegistration.KubeletExtraArgs != nil {
 			bottlerocketConfig.KubeletExtraArgs = scope.Config.Spec.InitConfiguration.NodeRegistration.KubeletExtraArgs
 		}
+		if len(scope.Config.Spec.InitConfiguration.NodeRegistration.Taints) > 0 {
+			bottlerocketConfig.Taints = scope.Config.Spec.InitConfiguration.NodeRegistration.Taints
+		}
 	}
 
 	clusterdata, err := kubeadmtypes.MarshalClusterConfigurationForVersion(scope.Config.Spec.ClusterConfiguration, parsedVersion)
@@ -712,6 +715,10 @@ func (r *KubeadmConfigReconciler) joinControlplane(ctx context.Context, scope *S
 		if scope.Config.Spec.JoinConfiguration.NodeRegistration.KubeletExtraArgs != nil {
 			bottlerocketConfig.KubeletExtraArgs = scope.Config.Spec.JoinConfiguration.NodeRegistration.KubeletExtraArgs
 		}
+		if len(scope.Config.Spec.JoinConfiguration.NodeRegistration.Taints) > 0 {
+			bottlerocketConfig.Taints = scope.Config.Spec.JoinConfiguration.NodeRegistration.Taints
+		}
+
 		cloudJoinData, err = bottlerocket.NewJoinControlPlane(cloudJoinInput, bottlerocketConfig)
 		if err != nil {
 			scope.Error(err, "Failed to generate cloud init for bottlerocket bootstrap control plane")

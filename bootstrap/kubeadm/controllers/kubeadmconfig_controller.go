@@ -437,6 +437,7 @@ func (r *KubeadmConfigReconciler) handleClusterNotInitialized(ctx context.Contex
 		bottlerocketConfig = &bottlerocket.BottlerocketConfig{
 			Pause:                 scope.Config.Spec.ClusterConfiguration.Pause,
 			BottlerocketBootstrap: scope.Config.Spec.ClusterConfiguration.BottlerocketBootstrap,
+			BottlerocketControl:   scope.Config.Spec.ClusterConfiguration.BottlerocketControl,
 		}
 		if scope.Config.Spec.ClusterConfiguration.Proxy.HTTPSProxy != "" {
 			bottlerocketConfig.ProxyConfiguration = scope.Config.Spec.ClusterConfiguration.Proxy
@@ -594,6 +595,7 @@ func (r *KubeadmConfigReconciler) joinWorker(ctx context.Context, scope *Scope) 
 		bottlerocketConfig := &bottlerocket.BottlerocketConfig{
 			Pause:                 scope.Config.Spec.JoinConfiguration.Pause,
 			BottlerocketBootstrap: scope.Config.Spec.JoinConfiguration.BottlerocketBootstrap,
+			BottlerocketControl:   scope.Config.Spec.JoinConfiguration.BottlerocketControl,
 		}
 		if scope.Config.Spec.JoinConfiguration.Proxy.HTTPSProxy != "" {
 			bottlerocketConfig.ProxyConfiguration = scope.Config.Spec.JoinConfiguration.Proxy
@@ -705,6 +707,7 @@ func (r *KubeadmConfigReconciler) joinControlplane(ctx context.Context, scope *S
 		bottlerocketConfig := &bottlerocket.BottlerocketConfig{
 			Pause:                 scope.Config.Spec.JoinConfiguration.Pause,
 			BottlerocketBootstrap: scope.Config.Spec.JoinConfiguration.BottlerocketBootstrap,
+			BottlerocketControl:   scope.Config.Spec.JoinConfiguration.BottlerocketControl,
 		}
 		if scope.Config.Spec.JoinConfiguration.Proxy.HTTPSProxy != "" {
 			bottlerocketConfig.ProxyConfiguration = scope.Config.Spec.JoinConfiguration.Proxy

@@ -159,3 +159,5 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.13.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.0 // indirect
 )
+
+replace github.com/coredns/corefile-migration => github.com/coredns/corefile-migration v1.0.15-0.20220217191920-333bf4008d5f
